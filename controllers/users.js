@@ -80,7 +80,7 @@ export const getAllUser = async (req, res) => {
 
 export const getUser = async (req, res) => {
   let collection = await db.collection("posts");
-  let query = { _id: new ObjectId(req.params.id) }; //harus pake new, gatau ini karena apa new nya
+  let query = { _id: (req.params.id) };
   let result = await collection.findOne(query);
   console.log(req.params.id);
   if (!result)
@@ -105,26 +105,57 @@ export const getUser = async (req, res) => {
   res.send(foundUser);
 };
 
-export const deleteUser = (req, res) => {
-  const { id } = req.params;
+export const deleteUser = async (req, res) => {
+//   const { id } = req.params;
 
-  users = users.filter((user) => user.id !== id); //filter akan melakukan remove apabila function menjalankan false. sehingga logic yang di dalam harus melakukan return false agar gak didelete. kalo true maka otomatis akan didelete
+//   users = users.filter((user) => user.id !== id); //filter akan melakukan remove apabila function menjalankan false. sehingga logic yang di dalam harus melakukan return false agar gak didelete. kalo true maka otomatis akan didelete
 
-  res.send(`User with the id ${id} deleted from the database`);
+//   res.send(`User with the id ${id} deleted from the database`);
+
+  const query = { _id:(req.params.id) };
+  const collection = db.collection("posts");
+  let result = await collection.deleteOne(query);
+  if (!result)
+  res
+    .send({
+      status: 0,
+      message: `data not found`,
+      result,
+    })
+    .status(404);
+else
+  res
+    .send({
+      status: 1,
+      message: `user with id ${req.params.id} successfully deleted`,
+      result,
+    })
+    .status(200);
+
 };
 
-export const editUser = (req, res) => {
-  const { id } = req.params;
+export const editUser = async(req, res) => {
+//   const { id } = req.params;
 
-  const userTobeUpdated = users.find((user) => user.id == id); //melakukan pencarian si users dengan params yang didapatkan dari constant id
+//   const userTobeUpdated = users.find((user) => user.id == id); //melakukan pencarian si users dengan params yang didapatkan dari constant id
 
-  const { first_name, last_name, age } = req.body;
+//   const { first_name, last_name, age } = req.body;
 
-  if (first_name) userTobeUpdated.first_name = first_name;
+//   if (first_name) userTobeUpdated.first_name = first_name;
 
-  if (last_name) userTobeUpdated.last_name = last_name;
+//   if (last_name) userTobeUpdated.last_name = last_name;
 
-  if (age) userTobeUpdated.age = age;
+//   if (age) userTobeUpdated.age = age;
 
-  res.send(`user with the id ${id} has been updated`);
+//   res.send(`user with the id ${id} has been updated`);
+
+//   const query = { _id: new ObjectId(req.params.id) };   //pake ini kalo id nya pake id nya mongodb
+  const query = { _id: (req.params.id) };       //pake ini kalo idnya pake uuid
+  
+  const updates = {
+    $set: req.body
+  };
+  let collection = await db.collection("posts");
+  let result = await collection.updateOne(query, updates);
+  res.send(result).status(200);
 };
