@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
+import cors from 'cors';
 
 import usersRoutes from './routes/usersroutes.js'
 
@@ -10,6 +11,7 @@ const PORT = 5000; //menjalankan di port 5000
 
 dotenv.config();
 
+app.use(cors({credentials:true, origin:'http://localhost:3000'}))
 app.use(express.json());
 app.use(cookieParser());                            //bisa mengambil value dari cookie
 
