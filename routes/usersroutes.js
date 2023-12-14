@@ -6,6 +6,7 @@ import {
   detailUser,
   editUser,  
   getAllUser,    
+  getMe,    
   login,  
   logout
 } from "../controllers/userscontroller.js";
@@ -19,12 +20,14 @@ const router = express.Router();
 //RESTful API ini menggunakan x-www-form-urlencoded
 
 //all routes in here are starting with /users
-router.get("/",verifyToken, getAllUser);
+router.get("/", verifyToken, getAllUser);
 
 router.post("/", createUser);
 
 //router ini untuk mendapatkan params dengan key id
-router.get("/:id", detailUser);
+router.get("/detail/:id", detailUser);
+
+router.get("/me", getMe);
 
 router.delete("/:id", deleteUser);
 

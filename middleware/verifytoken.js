@@ -2,8 +2,8 @@ import jwt from "jsonwebtoken";
 
 export const verifyToken = (req, res, next) => {                                    //MEMBUAT middleware untuk authentication
 
-  const refreshToken = req.cookies.refreshToken; //mengambil cookies bernama refresh token
-  if (!refreshToken) return res.sendStatus(401); //bila tidak ada cookies maka unauthorized
+  // const refreshToken = req.cookies.refreshToken; //mengambil cookies bernama refresh token
+  // if (!refreshToken) return res.sendStatus(401); //bila tidak ada cookies maka unauthorized
 
 
   const authHeader = req.headers["authorization"];

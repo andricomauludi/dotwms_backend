@@ -7,11 +7,11 @@ import cors from 'cors';
 import usersRoutes from './routes/usersroutes.js'
 
 const app = express();
-const PORT = 5000; //menjalankan di port 5000
+const PORT = 3001; //menjalankan di port 5000
 
 dotenv.config();
 
-app.use(cors({credentials:true, origin:'http://localhost:3000'}))
+app.use(cors())
 app.use(express.json());
 app.use(cookieParser());                            //bisa mengambil value dari cookie
 

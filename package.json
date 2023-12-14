@@ -1,7 +1,7 @@
 {
-  "name": "dotswms-frontend",
+  "name": "dotswms-backend",
   "version": "1.0.0",
-  "description": "frontend dot work management system",
+  "description": "backend dot work management system",
   "main": "app.js",
   "type": "module",
   "scripts": {

@@ -62,27 +62,27 @@ export const login = async (req, res) => {
       { userId, userName, email, role },
       process.env.ACCESS_TOKEN_SECRET,
       {
-        expiresIn: "20s",
-      }
-    );
-    const refreshToken = jwt.sign(
-      { userId, userName, email, role }, //bangun payload
-      process.env.REFRESH_TOKEN_SECRET,
-      {
         expiresIn: "1d",
       }
     );
-    const querydb = { email: email };
-    const updates = {
-      $set: { refresh_token: refreshToken }, //harus pake set buat di update
-    };
-    await collection.updateOne(querydb, updates);
-    res.cookie("refreshToken", refreshToken, {
-      //menyalakan cookie
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000,
-      // secure : true   //ini untuk https
-    });
+    // const refreshToken = jwt.sign(
+    //   { userId, userName, email, role }, //bangun payload
+    //   process.env.REFRESH_TOKEN_SECRET,
+    //   {
+    //     expiresIn: "1d",
+    //   }
+    // );
+    // const querydb = { email: email };
+    // const updates = {
+    //   $set: { refresh_token: refreshToken }, //harus pake set buat di update
+    // };
+    // await collection.updateOne(querydb, updates);
+    // res.cookie("refreshToken", refreshToken, {
+    //   //menyalakan cookie
+    //   httpOnly: true,
+    //   maxAge: 24 * 60 * 60 * 1000,
+    //   // secure : true   //ini untuk https
+    // });
     return res.status(200).json({ status: 1, message: `OK`, accessToken });
   } catch (error) {
     return res.status(400).json({ status: -1, message: `Error on system` });
@@ -102,12 +102,12 @@ export const logout = async (req, res) => {
     $set: { refresh_token: null }, //harus pake set buat di update
   };
   let result2 = await UsersModel.findOneAndUpdate(query2, updates);
-  res.clearCookie('refreshToken');
+  res.clearCookie("refreshToken");
   if (!result2)
     res
       .send({
         status: 0,
-        message: `data not found`,        
+        message: `data not found`,
       })
       .status(404);
   else
@@ -183,6 +183,37 @@ export const detailUser = async (req, res) => {
       .json({ status: 0, message: `Error on showing detail user` });
   }
 };
+export const getMe = async (req, res) => {
+;
+
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1]; //mengambil authheader kalo ada ambil token nya, token di split karena nanti tulisannya : token eySAFas.....
+  if (token == null) return res.sendStatus(401);
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    //melakukan decoded token untuk mengambil payload
+    if (err) return res.sendStatus(403); //forbidden
+    req.userId = decoded.userId;
+  });
+
+  let query = { _id: req.userId }
+  console.log(req.userId);
+
+  try {
+    const user= await UsersModel.findOne(query).select(
+      "-password -is_admin -refresh_Token"
+    );
+    if (!user)
+      return res.status(404).json({ status: 0, message: `Data not Found` });
+
+    return res
+      .status(200)
+      .json({ status: 1, message: `Get Me success`, user });
+  } catch (error) {
+    return res
+      .status(400)
+      .json({ status: 0, message: `Error on showing get me` });
+  }
+};
 
 export const deleteUser = async (req, res) => {
   try {
@@ -192,12 +223,10 @@ export const deleteUser = async (req, res) => {
     if (!result)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
-    return res
-      .status(200)
-      .json({
-        status: 1,
-        message: `User with id ` + req.params.id + ` is deleted`,
-      });
+    return res.status(200).json({
+      status: 1,
+      message: `User with id ` + req.params.id + ` is deleted`,
+    });
   } catch (error) {
     return res
       .status(400)
