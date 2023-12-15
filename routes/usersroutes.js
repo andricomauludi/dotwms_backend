@@ -22,20 +22,20 @@ const router = express.Router();
 //all routes in here are starting with /users
 router.get("/", verifyToken, getAllUser);
 
-router.post("/", createUser);
+router.post("/", verifyToken, createUser);
 
 //router ini untuk mendapatkan params dengan key id
-router.get("/detail/:id", detailUser);
+router.get("/detail/:id", verifyToken, detailUser);
 
-router.get("/me", getMe);
+router.get("/me", verifyToken, getMe);
 
-router.delete("/:id", deleteUser);
+router.delete("/:id", verifyToken, deleteUser);
 
-router.patch("/:id", editUser);
-router.post("/change-password", changePassword);
+router.patch("/:id", verifyToken, editUser);
+router.post("/change-password", verifyToken, changePassword);
 router.post("/login", login);
-router.delete("/auth/logout", logout);
+router.delete("/auth/logout", verifyToken, logout);
 
-router.get("/renew/token", refreshToken);     //  untuk melakukan refresh token tanpa perlu login ulang
+router.get("/renew/token", verifyToken, refreshToken);     //  untuk melakukan refresh token tanpa perlu login ulang
 
 export default router;

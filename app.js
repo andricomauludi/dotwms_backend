@@ -5,9 +5,10 @@ import cookieParser from "cookie-parser";
 import cors from 'cors';
 
 import usersRoutes from './routes/usersroutes.js'
+import workspacesRoutes from './routes/workspacesroutes.js'
 
 const app = express();
-const PORT = 3001; //menjalankan di port 5000
+const PORT = 3001; //menjalankan di port 3001
 
 dotenv.config();
 
@@ -17,9 +18,11 @@ app.use(cookieParser());                            //bisa mengambil value dari 
 
 app.use(express.urlencoded({ extended: true }));   //extended true akan menghilangkan object :null protoype, kalo false akan muncul si objectnya
 
+
 mongoose.connect(process.env.mongodb_connection)
 
 app.use('/users', usersRoutes);
+app.use('/workspaces', workspacesRoutes);
 
  
 

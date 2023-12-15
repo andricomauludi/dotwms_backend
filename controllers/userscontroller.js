@@ -1,12 +1,10 @@
 import { v4 as uuidv4 } from "uuid";
-import db from "../models/usersmodel_old.js";
 import UsersModel from "../models/usersmodel.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
 uuidv4();
 
-let collection = await db.collection("user"); //apabila ada perubahan delete maka tidak bisa dilakukan pada const, harus let
 
 export const changePassword = async (req, res) => {
   const { email, password, confPassword } = req.body;
