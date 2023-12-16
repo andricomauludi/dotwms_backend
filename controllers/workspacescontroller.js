@@ -77,7 +77,7 @@ export const getAllTableByProject = async (req, res) => {     //cari dari projec
   try {
     let query = { project_id: req.params.id };
     const tableproject = await TableProjectsModel.find(query).select(
-      "-_id"
+      // "-_id"
     );
     if (!tableproject)
       return res.status(404).json({ status: 0, message: `Data not Found` });
