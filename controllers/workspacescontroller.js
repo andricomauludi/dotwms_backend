@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import ProjectsModel from "../models/projectsmodel.js";
 import TableProjectsModel from "../models/tableprojectsmodel.js";
 import express from "express";
+import fs from "fs";
 
 
 
@@ -47,35 +48,28 @@ export const createTableProject = async (req, res) => {
   const contenttext = req.files['contenttext'];
   const contentposting = req.files['contentposting'];
   const postingcaption = req.files['postingcaption'];
-  newDocument.contenttext = contenttext.filename;
-  newDocument.contentposting = contentposting.filename;
-  newDocument.postingcaption = postingcaption.filename;
-  console.log(contenttext.filename,contentposting.filename,postingcaption.filename);
+  newDocument.contenttext = contenttext[0].filename;
+  newDocument.contentposting = contentposting[0].filename;
+  newDocument.postingcaption = postingcaption[0].filename;
+  
+  const result = await TableProjectsModel.create(newDocument);
 
-// app.post("/uploads",uploads.array("files",(req,res)=>{
-//   console.log(req.body);
-//   console.log(req.files);
-//   console.log({status:"files received"})
-// }))
-   
-  // const result = await TableProjectsModel.create(newDocument);
-
-  // if (!result)
-  //   res
-  //     .send({
-  //       status: 0,
-  //       message: `Cannot create data in database`,
-  //       result,
-  //     })
-  //     .status(404);
-  // else
-  //   res
-  //     .send({
-  //       status: 1,
-  //       message: "Table Project created",
-  //       result,
-  //     })
-  //     .status(201);
+  if (!result)
+    res
+      .send({
+        status: 0,
+        message: `Cannot create data in database`,
+        result,
+      })
+      .status(404);
+  else
+    res
+      .send({
+        status: 1,
+        message: "Table Project created",
+        result,
+      })
+      .status(201);
 };
 
 export const getAllProject = async (req, res) => {
@@ -83,8 +77,7 @@ export const getAllProject = async (req, res) => {
     const project = await ProjectsModel.find().select(
       "-_id"
     );
-    if (!project)
-      return res.status(404).json({ status: 0, message: `Data not Found` });
+    if (!project) return res.status(404).json({ status: 0, message: `Data not Found` });        
 
     return res.status(200).json({ status: 1, message: `Get All Projects`, project });
   } catch (error) {
@@ -109,24 +102,28 @@ export const getAllTableByProject = async (req, res) => {     //cari dari projec
       .json({ status: 0, message: `Error on getting all table projects` });
   }
 };
-export const detailUser = async (req, res) => {
+export const detailTableProject = async (req, res) => {
   let query = { _id: req.params.id };
-  try {
-    const user = await UsersModel.findOne(query).select(
-      "-password -is_admin -refresh_Token"
+  try {    
+    const tableproject = await TableProjectsModel.findOne(query).select(     
     );
-    if (!user)
+    if (!tableproject)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
+    const contents = fs.readFileSync(`./assets/contenttext/`+tableproject['contenttext'], {encoding: 'base64'});
+    tableproject['contenttext']= contents;
+    
     return res
       .status(200)
-      .json({ status: 1, message: `Get Detail User`, user });
+      .json({ status: 1, message: `Get Detail Table Project success!`, tableproject });
   } catch (error) {
     return res
       .status(400)
-      .json({ status: 0, message: `Error on showing detail user` });
+      .json({ status: 0, message: `Error on showing detail Table Project`,error });
   }
 };
+
+
 export const getMe = async (req, res) => {
 ;
 
