@@ -34,7 +34,7 @@ router.delete("/:id", verifyToken, deleteUser);
 router.patch("/:id", verifyToken, editUser);
 router.post("/change-password", verifyToken, changePassword);
 router.post("/login", login);
-router.delete("/auth/logout", verifyToken, logout);
+router.delete("/logout", logout);
 
 router.get("/renew/token", verifyToken, refreshToken);     //  untuk melakukan refresh token tanpa perlu login ulang
 

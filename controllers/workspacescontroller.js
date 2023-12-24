@@ -2,6 +2,12 @@ import { v4 as uuidv4 } from "uuid";
 import jwt from "jsonwebtoken";
 import ProjectsModel from "../models/projectsmodel.js";
 import TableProjectsModel from "../models/tableprojectsmodel.js";
+import express from "express";
+
+
+
+const app = express();
+
 
 uuidv4();
 
@@ -37,25 +43,39 @@ export const createTableProject = async (req, res) => {
   const projectid = uuidv4(); //generate user id
   newDocument._id = projectid;
   newDocument.created_at = new Date();
-   
-  const result = await TableProjectsModel.create(newDocument);
+  // foto = req.file
+  const contenttext = req.files['contenttext'];
+  const contentposting = req.files['contentposting'];
+  const postingcaption = req.files['postingcaption'];
+  newDocument.contenttext = contenttext.filename;
+  newDocument.contentposting = contentposting.filename;
+  newDocument.postingcaption = postingcaption.filename;
+  console.log(contenttext.filename,contentposting.filename,postingcaption.filename);
 
-  if (!result)
-    res
-      .send({
-        status: 0,
-        message: `Cannot create data in database`,
-        result,
-      })
-      .status(404);
-  else
-    res
-      .send({
-        status: 1,
-        message: "Table Project created",
-        result,
-      })
-      .status(201);
+// app.post("/uploads",uploads.array("files",(req,res)=>{
+//   console.log(req.body);
+//   console.log(req.files);
+//   console.log({status:"files received"})
+// }))
+   
+  // const result = await TableProjectsModel.create(newDocument);
+
+  // if (!result)
+  //   res
+  //     .send({
+  //       status: 0,
+  //       message: `Cannot create data in database`,
+  //       result,
+  //     })
+  //     .status(404);
+  // else
+  //   res
+  //     .send({
+  //       status: 1,
+  //       message: "Table Project created",
+  //       result,
+  //     })
+  //     .status(201);
 };
 
 export const getAllProject = async (req, res) => {
