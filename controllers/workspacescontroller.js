@@ -5,17 +5,13 @@ import TableProjectsModel from "../models/tableprojectsmodel.js";
 import express from "express";
 import fs from "fs";
 
-
-
 const app = express();
-
 
 uuidv4();
 
-
 export const createProject = async (req, res) => {
   // Create a new blog post object
-  let newDocument = req.body;   
+  let newDocument = req.body;
   const projectid = uuidv4(); //generate user id
   newDocument._id = projectid;
   newDocument.created_at = new Date();
@@ -40,18 +36,19 @@ export const createProject = async (req, res) => {
 };
 export const createTableProject = async (req, res) => {
   // Create a new blog post object
-  let newDocument = req.body;   
+  let newDocument = req.body;
   const projectid = uuidv4(); //generate user id
   newDocument._id = projectid;
   newDocument.created_at = new Date();
   // foto = req.file
-  const contenttext = req.files['contenttext'];
-  const contentposting = req.files['contentposting'];
-  const postingcaption = req.files['postingcaption'];
-  newDocument.contenttext = contenttext[0].filename;
-  newDocument.contentposting = contentposting[0].filename;
-  newDocument.postingcaption = postingcaption[0].filename;
-  
+  const contenttext = req.files["contenttext"];
+  const contentposting = req.files["contentposting"];
+  const postingcaption = req.files["postingcaption"];
+
+  if (contenttext) newDocument.contenttext = contenttext[0].filename;
+  if (contentposting) newDocument.contentposting = contentposting[0].filename;
+  if (postingcaption) newDocument.postingcaption = postingcaption[0].filename;
+
   const result = await TableProjectsModel.create(newDocument);
 
   if (!result)
@@ -74,28 +71,33 @@ export const createTableProject = async (req, res) => {
 
 export const getAllProject = async (req, res) => {
   try {
-    const project = await ProjectsModel.find().select(
-      "-_id"
-    );
-    if (!project) return res.status(404).json({ status: 0, message: `Data not Found` });        
+    const project = await ProjectsModel.find().select("-_id");
+    if (!project)
+      return res.status(404).json({ status: 0, message: `Data not Found` });
 
-    return res.status(200).json({ status: 1, message: `Get All Projects`, project });
+    return res
+      .status(200)
+      .json({ status: 1, message: `Get All Projects`, project });
   } catch (error) {
     return res
       .status(400)
       .json({ status: 0, message: `Error on getting all projects` });
   }
 };
-export const getAllTableByProject = async (req, res) => {     //cari dari project id
+export const getAllTableByProject = async (req, res) => {
+  //cari dari project id
   try {
     let query = { project_id: req.params.id };
-    const tableproject = await TableProjectsModel.find(query).select(
+    const tableproject = await TableProjectsModel.find(query)
+      .select
       // "-_id"
-    );
+      ();
     if (!tableproject)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
-    return res.status(200).json({ status: 1, message: `Get All Table Projects`, tableproject });
+    return res
+      .status(200)
+      .json({ status: 1, message: `Get All Table Projects`, tableproject });
   } catch (error) {
     return res
       .status(400)
@@ -104,29 +106,58 @@ export const getAllTableByProject = async (req, res) => {     //cari dari projec
 };
 export const detailTableProject = async (req, res) => {
   let query = { _id: req.params.id };
-  try {    
-    const tableproject = await TableProjectsModel.findOne(query).select(     
-    );
+  try {
+    const tableproject = await TableProjectsModel.findOne(query).select();
     if (!tableproject)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
-    const contents = fs.readFileSync(`./assets/contenttext/`+tableproject['contenttext'], {encoding: 'base64'});
-    tableproject['contenttext']= contents;
-    
-    return res
-      .status(200)
-      .json({ status: 1, message: `Get Detail Table Project success!`, tableproject });
+    const contents = base64Encode(tableproject["contenttext"]);
+    tableproject["contenttext"] = await contents;
+
+    // const contentoutput = base64Decode(tableproject["contenttext"] );
+    // tableproject["contenttext"] = await contentoutput;
+
+    return res.status(200).json({
+      status: 1,
+      message: `Get Detail Table Project success!`,
+      tableproject,
+    });
   } catch (error) {
-    return res
-      .status(400)
-      .json({ status: 0, message: `Error on showing detail Table Project`,error });
+    return res.status(400).json({
+      status: 0,
+      message: `Error on showing detail Table Project`,
+      error,
+    });
   }
 };
 
+function base64Encode(inputFileName) {
+  const contents = fs.readFileSync(`./assets/contenttext/` + inputFileName, {
+    encoding: "base64",
+  });
+
+  const binaryString = inputFileName;
+  const base64Encoded = Buffer.from(binaryString, "base64");
+
+  return contents;
+}
+
+function base64Decode(inputFile) {
+  // const decodedString = atob(inputFile); // Decoded string
+
+  var bitmap = Buffer.from(inputFile, "base64");
+  //  res.writeHead(200, {
+  //   'Content-Type': 'image/png',
+  //   'Content-Length': img.length
+  // });
+  // res.end(img);
+  // write buffer to file
+  // fs.writeFileSync(`./assets/contenttext/1703461997912-mantab.pdf`, bitmap);
+
+  return bitmap;
+}
 
 export const getMe = async (req, res) => {
-;
-
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1]; //mengambil authheader kalo ada ambil token nya, token di split karena nanti tulisannya : token eySAFas.....
   if (token == null) return res.sendStatus(401);
@@ -136,19 +167,17 @@ export const getMe = async (req, res) => {
     req.userId = decoded.userId;
   });
 
-  let query = { _id: req.userId }
+  let query = { _id: req.userId };
   console.log(req.userId);
 
   try {
-    const user= await UsersModel.findOne(query).select(
+    const user = await UsersModel.findOne(query).select(
       "-password -is_admin -refresh_Token"
     );
     if (!user)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
-    return res
-      .status(200)
-      .json({ status: 1, message: `Get Me success`, user });
+    return res.status(200).json({ status: 1, message: `Get Me success`, user });
   } catch (error) {
     return res
       .status(400)
