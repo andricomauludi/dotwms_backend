@@ -95,13 +95,30 @@ export const getAllTableByProject = async (req, res) => {
     if (!tableproject)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
+    for (let i = 0; i < tableproject.length; i++) {      
+      const contents = base64Encode(tableproject[i]["contenttext"],'contenttext');
+      tableproject[i]["contenttext"] = await contents;
+      const contentsavatar = base64Encode(tableproject[i]["avatar"],'profile_picture');
+      tableproject[i]["avatar"] = await contentsavatar;
+      const contentposting = base64Encode(tableproject[i]["contentposting"],'contentposting');
+      tableproject[i]["contentposting"] = await contentposting;
+      const postingcaption = base64Encode(tableproject[i]["postingcaption"],'postingcaption');
+      tableproject[i]["postingcaption"] = await postingcaption;
+      
+    }
+
+    
     return res
       .status(200)
       .json({ status: 1, message: `Get All Table Projects`, tableproject });
   } catch (error) {
     return res
       .status(400)
-      .json({ status: 0, message: `Error on getting all table projects` });
+      .json({
+        status: 0,
+        message: `Error on getting all table projects`,
+        error,
+      });
   }
 };
 export const detailTableProject = async (req, res) => {
@@ -131,13 +148,10 @@ export const detailTableProject = async (req, res) => {
   }
 };
 
-function base64Encode(inputFileName) {
-  const contents = fs.readFileSync(`./assets/contenttext/` + inputFileName, {
+function base64Encode(inputFileName,content) {  
+  const contents = fs.readFileSync(`./assets/`+content+`/` + inputFileName, {
     encoding: "base64",
   });
-
-  const binaryString = inputFileName;
-  const base64Encoded = Buffer.from(binaryString, "base64");
 
   return contents;
 }
