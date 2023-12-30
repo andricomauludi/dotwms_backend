@@ -102,8 +102,7 @@ export const getAllTableByProject = async (req, res) => {
       tableproject[i]["avatar"] = await contentsavatar;
       const contentposting = base64Encode(tableproject[i]["contentposting"],'contentposting');
       tableproject[i]["contentposting"] = await contentposting;
-      const postingcaption = base64Encode(tableproject[i]["postingcaption"],'postingcaption');
-      tableproject[i]["postingcaption"] = await postingcaption;
+
       
     }
 
