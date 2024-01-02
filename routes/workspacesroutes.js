@@ -59,7 +59,7 @@ const storage = multer.diskStorage({
                 file.mimetype === 'image/png' ||
                 file.mimetype === 'image/jpg' ||
                 file.mimetype === 'image/jpeg'||
-                fiel.mimetype==='image/gif'
+                file.mimetype==='image/gif'
               ) { // check file type to be png, jpeg, or jpg
                 cb(null, true);
               } else {
