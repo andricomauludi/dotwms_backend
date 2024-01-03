@@ -4,6 +4,7 @@ import ProjectsModel from "../models/projectsmodel.js";
 import TableProjectsModel from "../models/tableprojectsmodel.js";
 import express from "express";
 import fs from "fs";
+import SubItemModel from "../models/subitemmodel.js";
 
 const app = express();
 
@@ -68,10 +69,38 @@ export const createTableProject = async (req, res) => {
       })
       .status(201);
 };
+export const createSubItem = async (req, res) => {
+  // Create a new blog post object
+  let newDocument = req.body;
+  const projectid = uuidv4(); //generate user id
+  newDocument._id = projectid;
+  newDocument.created_at = new Date();
+  // foto = req.file
+
+  const result = await SubItemModel.create(newDocument);
+
+  if (!result)
+    res
+      .send({
+        status: 0,
+        message: `Cannot create data in database`,
+        result,
+      })
+      .status(404);
+  else
+    res
+      .send({
+        status: 1,
+        message: "Sub Item created",
+        result,
+      })
+      .status(201);
+};
 
 export const getAllProject = async (req, res) => {
   try {
-    const project = await ProjectsModel.find().select("-_id");
+    // const project = await ProjectsModel.find().select("-_id");
+    const project = await ProjectsModel.find().select();
     if (!project)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
@@ -82,6 +111,29 @@ export const getAllProject = async (req, res) => {
     return res
       .status(400)
       .json({ status: 0, message: `Error on getting all projects` });
+  }
+};
+export const getAllSubItemByTable = async (req, res) => {
+  try {
+    let query = { table_project_id: req.params.id };
+    const subItem = await SubItemModel.find(query)
+      .select
+      // "-_id"
+      ();
+    if (!subItem)
+      return res.status(404).json({ status: 0, message: `Data not Found` });
+
+    return res
+      .status(200)
+      .json({ status: 1, message: `Get All Sub Item`, subItem });
+  } catch (error) {
+    return res
+      .status(400)
+      .json({
+        status: 0,
+        message: `Error on getting all sub items`,
+        error,
+      });
   }
 };
 export const getAllTableByProject = async (req, res) => {

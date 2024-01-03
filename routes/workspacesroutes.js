@@ -2,7 +2,7 @@ import express from "express";
 import { verifyToken } from "../middleware/verifytoken.js";
 import multer from "multer";
 
-import { createProject, createTableProject, detailTableProject, getAllProject, getAllTableByProject } from "../controllers/workspacescontroller.js";
+import { createProject, createSubItem, createTableProject, detailTableProject, getAllProject, getAllSubItemByTable, getAllTableByProject } from "../controllers/workspacescontroller.js";
 
 const router = express.Router();
 
@@ -80,5 +80,8 @@ router.post("/create-table-project", multipleUpload, verifyToken, createTablePro
 // router.post("/create-table-project", uploads.single('foto'), verifyToken, createTableProject);
 router.get("/all-table-project/:id", verifyToken, getAllTableByProject);
 router.get("/detail-table-project/:id", verifyToken, detailTableProject);
+
+router.post("/create-sub-item",uploads.none(), verifyToken, createSubItem);
+router.get("/all-sub-item/:id",uploads.none(), verifyToken, getAllSubItemByTable);
 
 export default router;
