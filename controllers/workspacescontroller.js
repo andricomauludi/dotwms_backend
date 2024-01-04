@@ -280,6 +280,24 @@ export const deleteUser = async (req, res) => {
       .json({ status: -1, message: `Error on delete user` });
   }
 };
+export const deleteTableProject = async (req, res) => {
+  try {
+    const query = { _id: req.params.id };
+    let result = await TableProjectsModel.deleteOne(query);
+
+    if (!result)
+      return res.status(404).json({ status: 0, message: `Data not Found` });
+
+    return res.status(200).json({
+      status: 1,
+      message: `Table Project with id ` + req.params.id + ` is deleted`,
+    });
+  } catch (error) {
+    return res
+      .status(400)
+      .json({ status: -1, message: `Error on delete Table Project` });
+  }
+};
 
 export const editUser = async (req, res) => {
   const query = { _id: req.params.id }; //pake ini kalo idnya pake uuid
@@ -300,6 +318,31 @@ export const editUser = async (req, res) => {
       .send({
         status: 1,
         message: `user with id ${req.params.id} successfully updated`,
+        result,
+      })
+      .status(200);
+};
+export const editSubItem = async (req, res) => {
+  
+  let newDocument = req.body;
+  const query = { _id: newDocument._id }; //pake ini kalo idnya pake uuid
+
+  const updates = {
+    $set: newDocument,
+  };
+  let result = await SubItemModel.findByIdAndUpdate(query, updates);
+  if (!result)
+    res
+      .send({
+        status: 0,
+        message: `data not found`,
+      })
+      .status(404);
+  else
+    res
+      .send({
+        status: 1,
+        message: `Sub Item with id ${req.params.id} successfully updated`,
         result,
       })
       .status(200);

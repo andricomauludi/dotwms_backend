@@ -4,6 +4,7 @@ import {
   createUser,
   deleteUser,
   detailUser,
+  dropdownUser,
   editUser,  
   getAllUser,    
   getMe,    
@@ -28,6 +29,7 @@ router.post("/", verifyToken, createUser);
 router.get("/detail/:id", verifyToken, detailUser);
 
 router.get("/me", verifyToken, getMe);
+router.get("/dropdown-user", verifyToken, dropdownUser);
 
 router.delete("/:id", verifyToken, deleteUser);
 

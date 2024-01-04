@@ -163,6 +163,21 @@ export const getAllUser = async (req, res) => {
       .json({ status: 0, message: `Error on getting all users` });
   }
 };
+export const dropdownUser = async (req, res) => {
+  try {
+    const user = await UsersModel.find().select(
+      "-password -is_admin -refresh_Token -birthday -address -phone"
+    );
+    if (!user)
+      return res.status(404).json({ status: 0, message: `Data not Found` });
+
+    return res.status(200).json({ status: 1, message: `Get All Users for dropdown`, user });
+  } catch (error) {
+    return res
+      .status(400)
+      .json({ status: 0, message: `Error on getting all users` });
+  }
+};
 export const detailUser = async (req, res) => {
   let query = { _id: req.params.id };
   try {
