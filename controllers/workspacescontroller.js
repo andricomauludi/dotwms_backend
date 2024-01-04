@@ -304,3 +304,32 @@ export const editUser = async (req, res) => {
       })
       .status(200);
 };
+export const editTableProject = async (req, res) => {
+  
+  let newDocument = req.body;
+  const query = { _id: newDocument._id }; //pake ini kalo idnya pake uuid
+
+  if ( req.files["contenttext"]) newDocument.contenttext = req.files["contenttext"].filename;
+  if ( req.files["contentposting"]) newDocument.contentposting = req.files["contentposting"].filename;
+  if ( req.files["postingcaption"]) newDocument.postingcaption =  req.files["postingcaption"].filename;
+
+  const updates = {
+    $set: newDocument,
+  };
+  let result = await TableProjectsModel.findByIdAndUpdate(query, updates);
+  if (!result)
+    res
+      .send({
+        status: 0,
+        message: `data not found`,
+      })
+      .status(404);
+  else
+    res
+      .send({
+        status: 1,
+        message: `Table Project with id ${req.params.id} successfully updated`,
+        result,
+      })
+      .status(200);
+};

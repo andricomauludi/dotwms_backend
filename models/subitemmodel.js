@@ -10,7 +10,7 @@ const subItemSchema = new Schema({
   owner:String,
   avatar: String,
   status: String,
-  date: Date,
+  date: String,
   created_by: String,
   updated_by: String,
   created_at: Date,
