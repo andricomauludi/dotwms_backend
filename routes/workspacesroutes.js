@@ -6,6 +6,7 @@ import {
   createProject,
   createSubItem,
   createTableProject,
+  deleteSubItem,
   deleteTableProject,
   detailTableProject,
   editSubItem,
@@ -102,6 +103,7 @@ router.delete("/delete-table-project/:id", verifyToken, deleteTableProject);
 
 router.post("/create-sub-item", uploads.none(), verifyToken, createSubItem);
 router.patch("/edit-sub-item", uploads.none(), verifyToken, editSubItem);
+router.delete("/delete-sub-item/:id", verifyToken, deleteSubItem);
 router.get(
   "/all-sub-item/:id",
   uploads.none(),

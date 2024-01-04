@@ -298,6 +298,24 @@ export const deleteTableProject = async (req, res) => {
       .json({ status: -1, message: `Error on delete Table Project` });
   }
 };
+export const deleteSubItem = async (req, res) => {
+  try {
+    const query = { _id: req.params.id };
+    let result = await SubItemModel.deleteOne(query);
+
+    if (!result)
+      return res.status(404).json({ status: 0, message: `Data not Found` });
+
+    return res.status(200).json({
+      status: 1,
+      message: `Sub Item with id ` + req.params.id + ` is deleted`,
+    });
+  } catch (error) {
+    return res
+      .status(400)
+      .json({ status: -1, message: `Error on delete Sub Item` });
+  }
+};
 
 export const editUser = async (req, res) => {
   const query = { _id: req.params.id }; //pake ini kalo idnya pake uuid
