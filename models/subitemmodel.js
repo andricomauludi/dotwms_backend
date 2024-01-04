@@ -6,6 +6,7 @@ const subItemSchema = new Schema({
   _id: String,
   table_project_id:String,
   table_project_name:String,
+  subitem:String,
   owner:String,
   avatar: String,
   status: String,

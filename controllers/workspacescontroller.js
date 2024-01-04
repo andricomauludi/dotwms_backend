@@ -123,6 +123,12 @@ export const getAllSubItemByTable = async (req, res) => {
     if (!subItem)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
+      for (let i = 0; i < subItem.length; i++) {              
+        const contentsavatar = base64Encode(subItem[i]["avatar"],'profile_picture');
+        subItem[i]["avatar"] = await contentsavatar;                  
+      }
+  
+
     return res
       .status(200)
       .json({ status: 1, message: `Get All Sub Item`, subItem });
@@ -178,9 +184,15 @@ export const detailTableProject = async (req, res) => {
     const tableproject = await TableProjectsModel.findOne(query).select();
     if (!tableproject)
       return res.status(404).json({ status: 0, message: `Data not Found` });
-
-    const contents = base64Encode(tableproject["contenttext"]);
-    tableproject["contenttext"] = await contents;
+         
+        const contents = base64Encode(tableproject["contenttext"],'contenttext');
+        tableproject["contenttext"] = await contents;
+        const contentsavatar = base64Encode(tableproject["avatar"],'profile_picture');
+        tableproject["avatar"] = await contentsavatar;
+        const contentposting = base64Encode(tableproject["contentposting"],'contentposting');
+        tableproject["contentposting"] = await contentposting;
+  
+              
 
     // const contentoutput = base64Decode(tableproject["contenttext"] );
     // tableproject["contenttext"] = await contentoutput;
