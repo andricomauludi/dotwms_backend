@@ -156,8 +156,10 @@ export const getAllTableByProject = async (req, res) => {
     for (let i = 0; i < tableproject.length; i++) {      
       const contents = base64Encode(tableproject[i]["contenttext"],'contenttext');
       tableproject[i]["contenttext"] = await contents;
-      const contentsavatar = base64Encode(tableproject[i]["avatar"],'profile_picture');
-      tableproject[i]["avatar"] = await contentsavatar;
+      const contentsavatar = base64Encode(tableproject[i]["lead_avatar"],'profile_picture');
+      tableproject[i]["lead_avatar"] = await contentsavatar;
+      const contentsavatarupdatedby = base64Encode(tableproject[i]["updated_by_avatar"],'profile_picture');
+      tableproject[i]["updated_by_avatar"] = await contentsavatarupdatedby;
       const contentposting = base64Encode(tableproject[i]["contentposting"],'contentposting');
       tableproject[i]["contentposting"] = await contentposting;
 

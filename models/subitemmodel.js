@@ -8,6 +8,7 @@ const subItemSchema = new Schema({
   table_project_name:String,
   subitem:String,
   owner:String,
+  owner_email:String,
   avatar: String,
   status: String,
   date: String,
