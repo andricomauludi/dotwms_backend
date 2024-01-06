@@ -3,6 +3,7 @@ import { verifyToken } from "../middleware/verifytoken.js";
 import multer from "multer";
 
 import {
+  createGroupProject,
   createProject,
   createSubItem,
   createTableProject,
@@ -11,9 +12,11 @@ import {
   detailTableProject,
   editSubItem,
   editTableProject,
+  getAllGroupProject,
   getAllProject,
   getAllSubItemByTable,
-  getAllTableByProject,
+  getAllTableByProject,  
+  getProjectByGroupProject,
 } from "../controllers/workspacescontroller.js";
 
 const router = express.Router();
@@ -86,7 +89,11 @@ const multipleUpload = uploads.fields([
 //RESTful API ini menggunakan x-www-form-urlencoded
 
 //all routes in here are starting with /users
-router.post("/create-project", verifyToken, createProject);
+router.post("/create-group-project", uploads.none(), verifyToken, createGroupProject);
+router.get("/all-group-project", verifyToken, getAllGroupProject);
+router.get("/get-group-project/:id", verifyToken, getProjectByGroupProject);
+
+router.post("/create-project", uploads.none(), verifyToken, createProject);
 router.get("/all-project", verifyToken, getAllProject);
 
 router.post(

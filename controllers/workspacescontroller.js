@@ -5,10 +5,37 @@ import TableProjectsModel from "../models/tableprojectsmodel.js";
 import express from "express";
 import fs from "fs";
 import SubItemModel from "../models/subitemmodel.js";
+import GroupProjectModel from "../models/groupprojectmodel.js";
 
 const app = express();
 
 uuidv4();
+
+export const createGroupProject = async (req, res) => {
+  // Create a new blog post object
+  let newDocument = req.body;
+  const groupprojectid = uuidv4(); //generate user id
+  newDocument._id = groupprojectid;
+  newDocument.created_at = new Date();
+  const result = await GroupProjectModel.create(newDocument);
+
+  if (!result)
+    res
+      .send({
+        status: 0,
+        message: `Cannot create data in database`,
+        result,
+      })
+      .status(404);
+  else
+    res
+      .send({
+        status: 1,
+        message: "Group Project created",
+        result,
+      })
+      .status(201);
+};
 
 export const createProject = async (req, res) => {
   // Create a new blog post object
@@ -97,6 +124,22 @@ export const createSubItem = async (req, res) => {
       .status(201);
 };
 
+export const getAllGroupProject = async (req, res) => {
+  try {
+    // const project = await ProjectsModel.find().select("-_id");
+    const groupproject = await GroupProjectModel.find().select();
+    if (!groupproject)
+      return res.status(404).json({ status: 0, message: `Data not Found` });
+
+    return res
+      .status(200)
+      .json({ status: 1, message: `Get All Group Projects`, groupproject });
+  } catch (error) {
+    return res
+      .status(400)
+      .json({ status: 0, message: `Error on getting all group projects` });
+  }
+};
 export const getAllProject = async (req, res) => {
   try {
     // const project = await ProjectsModel.find().select("-_id");
@@ -138,6 +181,30 @@ export const getAllSubItemByTable = async (req, res) => {
       .json({
         status: 0,
         message: `Error on getting all sub items`,
+        error,
+      });
+  }
+};
+export const getProjectByGroupProject = async (req, res) => {
+  //cari dari project id
+  try {
+    let query = { group_project_id: req.params.id };
+    const groupproject = await ProjectsModel.find(query)
+      .select
+      // "-_id"
+      ();
+    if (!groupproject)
+      return res.status(404).json({ status: 0, message: `Data not Found` });  
+    
+    return res
+      .status(200)
+      .json({ status: 1, message: `Get All Project by Group Project`, groupproject });
+  } catch (error) {
+    return res
+      .status(400)
+      .json({
+        status: 0,
+        message: `Error on getting all project by group project`,
         error,
       });
   }
