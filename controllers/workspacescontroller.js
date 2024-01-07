@@ -185,6 +185,35 @@ export const getAllSubItemByTable = async (req, res) => {
       });
   }
 };
+export const myTask = async (req, res) => {
+  try {
+    let query = { owner_email: req.params.id };
+    const subItem = await SubItemModel.find(query)
+      .select
+      // "-_id"
+      ();
+    if (!subItem)
+      return res.status(404).json({ status: 0, message: `Data not Found` });
+
+      for (let i = 0; i < subItem.length; i++) {              
+        const contentsavatar = base64Encode(subItem[i]["avatar"],'profile_picture');
+        subItem[i]["avatar"] = await contentsavatar;                  
+      }
+  
+
+    return res
+      .status(200)
+      .json({ status: 1, message: `Get My Task`, subItem });
+  } catch (error) {
+    return res
+      .status(400)
+      .json({
+        status: 0,
+        message: `Error on getting my task`,
+        error,
+      });
+  }
+};
 export const getProjectByGroupProject = async (req, res) => {
   //cari dari project id
   try {

@@ -17,6 +17,7 @@ import {
   getAllSubItemByTable,
   getAllTableByProject,  
   getProjectByGroupProject,
+  myTask,
 } from "../controllers/workspacescontroller.js";
 
 const router = express.Router();
@@ -91,7 +92,7 @@ const multipleUpload = uploads.fields([
 //all routes in here are starting with /users
 router.post("/create-group-project", uploads.none(), verifyToken, createGroupProject);
 router.get("/all-group-project", verifyToken, getAllGroupProject);
-router.get("/get-group-project/:id", verifyToken, getProjectByGroupProject);
+router.get("/get-project-specific/:id", verifyToken, getProjectByGroupProject);
 
 router.post("/create-project", uploads.none(), verifyToken, createProject);
 router.get("/all-project", verifyToken, getAllProject);
@@ -116,6 +117,12 @@ router.get(
   uploads.none(),
   verifyToken,
   getAllSubItemByTable
+);
+router.get(
+  "/my-task/:id",
+  uploads.none(),
+  verifyToken,
+  myTask
 );
 
 export default router;
