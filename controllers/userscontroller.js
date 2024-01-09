@@ -156,13 +156,27 @@ export const getAllUser = async (req, res) => {
     if (!user)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
+      for (let i = 0; i < user.length; i++) {      
+        const content = base64Encode(user[i]["profile_picture"],'profile_picture');
+        user[i]["profile_picture"] = await content;    
+      }
+
     return res.status(200).json({ status: 1, message: `Get All Users`, user });
   } catch (error) {
     return res
       .status(400)
-      .json({ status: 0, message: `Error on getting all users` });
+      .json({ status: 0, message: `Error on getting all users`,error });
   }
 };
+
+function base64Encode(inputFileName,content) {  
+  const contents = fs.readFileSync(`./assets/`+content+`/` + inputFileName, {
+    encoding: "base64",
+  });
+
+  return contents;
+}
+
 export const dropdownUser = async (req, res) => {
   try {
     const user = await UsersModel.find().select(

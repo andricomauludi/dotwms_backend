@@ -6,6 +6,7 @@ import express from "express";
 import fs from "fs";
 import SubItemModel from "../models/subitemmodel.js";
 import GroupProjectModel from "../models/groupprojectmodel.js";
+import UsersModel from "../models/usersmodel.js";
 
 const app = express();
 
@@ -124,20 +125,27 @@ export const createSubItem = async (req, res) => {
       .status(201);
 };
 
-export const getAllGroupProject = async (req, res) => {
+export const getContentsCard = async (req, res) => {
   try {
     // const project = await ProjectsModel.find().select("-_id");
-    const groupproject = await GroupProjectModel.find().select();
-    if (!groupproject)
-      return res.status(404).json({ status: 0, message: `Data not Found` });
+    const groupproject = await GroupProjectModel.find().count();
+    const project = await ProjectsModel.find().count();
+    const tableproject = await TableProjectsModel.find().count();
+    const subitem = await SubItemModel.find().count();
+    const user = await UsersModel.find().count();
+    if (!groupproject) return res.status(404).json({ status: 0, message: `Data not Found` });
+    if (!project) return res.status(404).json({ status: 0, message: `Data not Found` });
+    if (!tableproject) return res.status(404).json({ status: 0, message: `Data not Found` });
+    if (!subitem) return res.status(404).json({ status: 0, message: `Data not Found` });
+    if (!user) return res.status(404).json({ status: 0, message: `Data not Found` });
 
     return res
       .status(200)
-      .json({ status: 1, message: `Get All Group Projects`, groupproject });
+      .json({ status: 1, message: `Get All contents for dashboard`, groupproject, project, tableproject, subitem,user });
   } catch (error) {
     return res
       .status(400)
-      .json({ status: 0, message: `Error on getting all group projects` });
+      .json({ status: 0, message: `Error on getting all contents for dashboard` });
   }
 };
 export const getAllProject = async (req, res) => {

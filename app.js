@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 
 import usersRoutes from "./routes/usersroutes.js";
+import dashboardRoutes from "./routes/dashboardroutes.js";
 import workspacesRoutes from "./routes/workspacesroutes.js";
 
 
@@ -23,6 +24,7 @@ mongoose.connect(process.env.mongodb_connection);
 
 app.use("/users", usersRoutes);
 app.use("/workspaces", workspacesRoutes);
+app.use("/dashboard", dashboardRoutes);
 
 // db.mongoose
 //     .connect(db.url,{
