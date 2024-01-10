@@ -69,11 +69,11 @@ export const createTableProject = async (req, res) => {
   newDocument._id = projectid;
   newDocument.created_at = new Date();
   // foto = req.file
-  const contenttext = req.files["contenttext"];
+  // const contenttext = req.files["contenttext"];
   const contentposting = req.files["contentposting"];
   const postingcaption = req.files["postingcaption"];
 
-  if (contenttext) newDocument.contenttext = contenttext[0].filename;
+  // if (contenttext) newDocument.contenttext = contenttext[0].filename;
   if (contentposting) newDocument.contentposting = contentposting[0].filename;
   if (postingcaption) newDocument.postingcaption = postingcaption[0].filename;
 
@@ -221,15 +221,16 @@ export const getAllTableByProject = async (req, res) => {
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
     for (let i = 0; i < tableproject.length; i++) {      
-      const contents = base64Encode(tableproject[i]["contenttext"],'contenttext');
-      tableproject[i]["contenttext"] = await contents;
+      // const contents = base64Encode(tableproject[i]["contenttext"],'contenttext');
+      // tableproject[i]["contenttext"] = await contents;
       const contentsavatar = base64Encode(tableproject[i]["lead_avatar"],'profile_picture');
       tableproject[i]["lead_avatar"] = await contentsavatar;
       const contentsavatarupdatedby = base64Encode(tableproject[i]["updated_by_avatar"],'profile_picture');
       tableproject[i]["updated_by_avatar"] = await contentsavatarupdatedby;
+      tableproject[i]["contentpostingname"]=tableproject[i]["contentposting"];
       const contentposting = base64Encode(tableproject[i]["contentposting"],'contentposting');
       tableproject[i]["contentposting"] = await contentposting;
-
+      
       
     }
 
