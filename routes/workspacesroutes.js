@@ -18,7 +18,7 @@ import {
   getAllTableByProject,  
   getProjectByGroupProject,  
 } from "../controllers/workspacescontroller.js";
-import { myTask } from "../controllers/mytaskcontroller.js";
+import { myTask, myTaskDone } from "../controllers/mytaskcontroller.js";
 
 const router = express.Router();
 
@@ -123,6 +123,12 @@ router.get(
   uploads.none(),
   verifyToken,
   myTask
+);
+router.get(
+  "/my-task-done/:id",
+  uploads.none(),
+  verifyToken,
+  myTaskDone
 );
 
 export default router;
