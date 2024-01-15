@@ -166,23 +166,23 @@ export const getAllSubItemByTable = async (req, res) => {
     if (!subItem)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
-      for (let i = 0; i < subItem.length; i++) {              
-        const contentsavatar = base64Encode(subItem[i]["avatar"],'profile_picture');
-        subItem[i]["avatar"] = await contentsavatar;                  
-      }
-  
+    for (let i = 0; i < subItem.length; i++) {
+      const contentsavatar = base64Encode(
+        subItem[i]["avatar"],
+        "profile_picture"
+      );
+      subItem[i]["avatar"] = await contentsavatar;
+    }
 
     return res
       .status(200)
       .json({ status: 1, message: `Get All Sub Item`, subItem });
   } catch (error) {
-    return res
-      .status(400)
-      .json({
-        status: 0,
-        message: `Error on getting all sub items`,
-        error,
-      });
+    return res.status(400).json({
+      status: 0,
+      message: `Error on getting all sub items`,
+      error,
+    });
   }
 };
 export const getProjectByGroupProject = async (req, res) => {
@@ -194,19 +194,19 @@ export const getProjectByGroupProject = async (req, res) => {
       // "-_id"
       ();
     if (!groupproject)
-      return res.status(404).json({ status: 0, message: `Data not Found` });  
-    
-    return res
-      .status(200)
-      .json({ status: 1, message: `Get All Project by Group Project`, groupproject });
+      return res.status(404).json({ status: 0, message: `Data not Found` });
+
+    return res.status(200).json({
+      status: 1,
+      message: `Get All Project by Group Project`,
+      groupproject,
+    });
   } catch (error) {
-    return res
-      .status(400)
-      .json({
-        status: 0,
-        message: `Error on getting all project by group project`,
-        error,
-      });
+    return res.status(400).json({
+      status: 0,
+      message: `Error on getting all project by group project`,
+      error,
+    });
   }
 };
 export const getAllTableByProject = async (req, res) => {
@@ -220,32 +220,36 @@ export const getAllTableByProject = async (req, res) => {
     if (!tableproject)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
-    for (let i = 0; i < tableproject.length; i++) {      
+    for (let i = 0; i < tableproject.length; i++) {
       // const contents = base64Encode(tableproject[i]["contenttext"],'contenttext');
       // tableproject[i]["contenttext"] = await contents;
-      const contentsavatar = base64Encode(tableproject[i]["lead_avatar"],'profile_picture');
+      const contentsavatar = base64Encode(
+        tableproject[i]["lead_avatar"],
+        "profile_picture"
+      );
       tableproject[i]["lead_avatar"] = await contentsavatar;
-      const contentsavatarupdatedby = base64Encode(tableproject[i]["updated_by_avatar"],'profile_picture');
+      const contentsavatarupdatedby = base64Encode(
+        tableproject[i]["updated_by_avatar"],
+        "profile_picture"
+      );
       tableproject[i]["updated_by_avatar"] = await contentsavatarupdatedby;
-      tableproject[i]["contentpostingname"]=tableproject[i]["contentposting"];
-      const contentposting = base64Encode(tableproject[i]["contentposting"],'contentposting');
+      tableproject[i]["contentpostingname"] = tableproject[i]["contentposting"];
+      const contentposting = base64Encode(
+        tableproject[i]["contentposting"],
+        "contentposting"
+      );
       tableproject[i]["contentposting"] = await contentposting;
-      
-      
     }
 
-    
     return res
       .status(200)
       .json({ status: 1, message: `Get All Table Projects`, tableproject });
   } catch (error) {
-    return res
-      .status(400)
-      .json({
-        status: 0,
-        message: `Error on getting all table projects`,
-        error,
-      });
+    return res.status(400).json({
+      status: 0,
+      message: `Error on getting all table projects`,
+      error,
+    });
   }
 };
 export const detailTableProject = async (req, res) => {
@@ -254,15 +258,19 @@ export const detailTableProject = async (req, res) => {
     const tableproject = await TableProjectsModel.findOne(query).select();
     if (!tableproject)
       return res.status(404).json({ status: 0, message: `Data not Found` });
-         
-        const contents = base64Encode(tableproject["contenttext"],'contenttext');
-        tableproject["contenttext"] = await contents;
-        const contentsavatar = base64Encode(tableproject["avatar"],'profile_picture');
-        tableproject["avatar"] = await contentsavatar;
-        const contentposting = base64Encode(tableproject["contentposting"],'contentposting');
-        tableproject["contentposting"] = await contentposting;
-  
-              
+
+    const contents = base64Encode(tableproject["contenttext"], "contenttext");
+    tableproject["contenttext"] = await contents;
+    const contentsavatar = base64Encode(
+      tableproject["avatar"],
+      "profile_picture"
+    );
+    tableproject["avatar"] = await contentsavatar;
+    const contentposting = base64Encode(
+      tableproject["contentposting"],
+      "contentposting"
+    );
+    tableproject["contentposting"] = await contentposting;
 
     // const contentoutput = base64Decode(tableproject["contenttext"] );
     // tableproject["contenttext"] = await contentoutput;
@@ -281,10 +289,13 @@ export const detailTableProject = async (req, res) => {
   }
 };
 
-function base64Encode(inputFileName,content) {  
-  const contents = fs.readFileSync(`./assets/`+content+`/` + inputFileName, {
-    encoding: "base64",
-  });
+function base64Encode(inputFileName, content) {
+  const contents = fs.readFileSync(
+    `./assets/` + content + `/` + inputFileName,
+    {
+      encoding: "base64",
+    }
+  );
 
   return contents;
 }
@@ -411,7 +422,6 @@ export const editUser = async (req, res) => {
       .status(200);
 };
 export const editSubItem = async (req, res) => {
-  
   let newDocument = req.body;
   const query = { _id: newDocument._id }; //pake ini kalo idnya pake uuid
 
@@ -436,13 +446,14 @@ export const editSubItem = async (req, res) => {
       .status(200);
 };
 export const editTableProject = async (req, res) => {
-  
   let newDocument = req.body;
   const query = { _id: newDocument._id }; //pake ini kalo idnya pake uuid
-
-  if ( req.files["contenttext"]) newDocument.contenttext = req.files["contenttext"].filename;
-  if ( req.files["contentposting"]) newDocument.contentposting = req.files["contentposting"].filename;
-  if ( req.files["postingcaption"]) newDocument.postingcaption =  req.files["postingcaption"].filename;
+  if (req.files["contentposting"] === undefined) {
+    delete newDocument.contentposting;
+  } else {
+    if (req.files["contentposting"])
+      newDocument.contentposting = req.files["contentposting"].filename;
+  }
 
   const updates = {
     $set: newDocument,
