@@ -127,7 +127,7 @@ export const createSubItem = async (req, res) => {
 export const getAllGroupProject = async (req, res) => {
   try {
     // const project = await ProjectsModel.find().select("-_id");
-    const groupproject = await GroupProjectModel.find().select();
+    const groupproject = await GroupProjectModel.find().select().sort({created_at: -1});;
     if (!groupproject)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
