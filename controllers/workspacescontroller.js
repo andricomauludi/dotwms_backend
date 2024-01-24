@@ -127,7 +127,9 @@ export const createSubItem = async (req, res) => {
 export const getAllGroupProject = async (req, res) => {
   try {
     // const project = await ProjectsModel.find().select("-_id");
-    const groupproject = await GroupProjectModel.find().select().sort({created_at: -1});;
+    const groupproject = await GroupProjectModel.find()
+      .select()
+      .sort({ created_at: -1 });
     if (!groupproject)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
@@ -290,12 +292,16 @@ export const detailTableProject = async (req, res) => {
 };
 
 function base64Encode(inputFileName, content) {
-  const contents = fs.readFileSync(
-    `./assets/` + content + `/` + inputFileName,
-    {
-      encoding: "base64",
-    }
-  );
+  if (!inputFileName == "") {
+    const contents = fs.readFileSync(
+      `./assets/` + content + `/` + inputFileName,
+      {
+        encoding: "base64",
+      }
+    );
+    return contents;
+  }
+  const contents = ""
 
   return contents;
 }
