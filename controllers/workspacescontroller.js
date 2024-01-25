@@ -331,8 +331,7 @@ export const getMe = async (req, res) => {
     req.userId = decoded.userId;
   });
 
-  let query = { _id: req.userId };
-  console.log(req.userId);
+  let query = { _id: req.userId };  
 
   try {
     const user = await UsersModel.findOne(query).select(
@@ -458,8 +457,9 @@ export const editTableProject = async (req, res) => {
     delete newDocument.contentposting;
   } else {
     if (req.files["contentposting"])
-      newDocument.contentposting = req.files["contentposting"].filename;
-  }
+    newDocument.contentposting = req.files["contentposting"][0].filename;  
+}
+
 
   const updates = {
     $set: newDocument,
@@ -476,7 +476,7 @@ export const editTableProject = async (req, res) => {
     res
       .send({
         status: 1,
-        message: `Table Project with id ${req.params.id} successfully updated`,
+        message: `Table Project with id ${newDocument._id} successfully updated`,
         result,
       })
       .status(200);

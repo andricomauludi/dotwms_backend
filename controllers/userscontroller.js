@@ -222,8 +222,7 @@ export const getMe = async (req, res) => {
     req.userId = decoded.userId;
   });
 
-  let query = { _id: req.userId }
-  console.log(req.userId);
+  let query = { _id: req.userId }  
 
   try {
     const user= await UsersModel.findOne(query).select(

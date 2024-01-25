@@ -234,8 +234,7 @@ export const login = async (req, res) => {
       {
         expiresIn: "1d",
       }
-    );
-    console.log(refreshToken);
+    );    
     const querydb = { email: email };
     const updates = {
       $set: { refresh_token: refreshToken }, //harus pake set buat di update
