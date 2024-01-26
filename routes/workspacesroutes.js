@@ -7,16 +7,20 @@ import {
   createProject,
   createSubItem,
   createTableProject,
+  deleteGroupProject,
+  deleteProject,
   deleteSubItem,
   deleteTableProject,
   detailTableProject,
+  editGroupProject,
+  editProject,
   editSubItem,
   editTableProject,
   getAllGroupProject,
   getAllProject,
   getAllSubItemByTable,
-  getAllTableByProject,  
-  getProjectByGroupProject,  
+  getAllTableByProject,
+  getProjectByGroupProject,
 } from "../controllers/workspacescontroller.js";
 import { myTask, myTaskDone } from "../controllers/mytaskcontroller.js";
 
@@ -90,12 +94,26 @@ const multipleUpload = uploads.fields([
 //RESTful API ini menggunakan x-www-form-urlencoded
 
 //all routes in here are starting with /users
-router.post("/create-group-project", uploads.none(), verifyToken, createGroupProject);
+router.post(
+  "/create-group-project",
+  uploads.none(),
+  verifyToken,
+  createGroupProject
+);
 router.get("/all-group-project", verifyToken, getAllGroupProject);
-router.get("/get-project-specific/:id", verifyToken, getProjectByGroupProject);
-
-router.post("/create-project", uploads.none(), verifyToken, createProject);
-router.get("/all-project", verifyToken, getAllProject);
+router.delete("/delete-group-project/:id", verifyToken, deleteGroupProject);
+router.patch(
+  "/edit-group-project",
+  uploads.none(),
+  verifyToken,
+  editGroupProject
+  );
+  router.get("/get-project-specific/:id", verifyToken, getProjectByGroupProject);
+  
+  router.post("/create-project", uploads.none(), verifyToken, createProject);
+  router.get("/all-project", verifyToken, getAllProject);
+  router.patch("/edit-project", uploads.none(), verifyToken, editProject);
+  router.delete("/delete-project/:id", verifyToken, deleteProject);
 
 router.post(
   "/create-table-project",
@@ -106,7 +124,12 @@ router.post(
 // router.post("/create-table-project", uploads.single('foto'), verifyToken, createTableProject);
 router.get("/all-table-project/:id", verifyToken, getAllTableByProject);
 router.get("/detail-table-project/:id", verifyToken, detailTableProject);
-router.patch("/edit-table-project", multipleUpload, verifyToken, editTableProject);
+router.patch(
+  "/edit-table-project",
+  multipleUpload,
+  verifyToken,
+  editTableProject
+);
 router.delete("/delete-table-project/:id", verifyToken, deleteTableProject);
 
 router.post("/create-sub-item", uploads.none(), verifyToken, createSubItem);
@@ -118,17 +141,7 @@ router.get(
   verifyToken,
   getAllSubItemByTable
 );
-router.get(
-  "/my-task/:id",
-  uploads.none(),
-  verifyToken,
-  myTask
-);
-router.get(
-  "/my-task-done/:id",
-  uploads.none(),
-  verifyToken,
-  myTaskDone
-);
+router.get("/my-task/:id", uploads.none(), verifyToken, myTask);
+router.get("/my-task-done/:id", uploads.none(), verifyToken, myTaskDone);
 
 export default router;
