@@ -218,7 +218,8 @@ export const getAllTableByProject = async (req, res) => {
     const tableproject = await TableProjectsModel.find(query)
       .select
       // "-_id"
-      ();
+      ()
+      .lean();
     if (!tableproject)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
