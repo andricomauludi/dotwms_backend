@@ -19,17 +19,26 @@ export const getContentsCard = async (req, res) => {
     const groupproject = await GroupProjectModel.findOne().sort({ created_at: -1 }).select('_id');
 
     var project = await ProjectsModel.findOne({group_project_id:groupproject._id}).select('_id').lean();
-    if (project!=null) {
+    if (project!=null) {      
       project.count = await ProjectsModel.find({group_project_id:groupproject._id}).count();
-    }
-    const tableproject = await TableProjectsModel.findOne({project_id:project._id}).select('_id').lean();    
-    if (tableproject!=null) {    
-      tableproject.count = await TableProjectsModel.find({project_id:project._id}).count();    
-    }
-    const subitem = await SubItemModel.findOne({table_project_id:tableproject._id}).select('_id').lean();
-    // console.log(subitem==null)
-    if (subitem!=null) {    
-      subitem.count = await SubItemModel.find({table_project_id:tableproject._id}).count();
+      var tableproject = await TableProjectsModel.findOne({project_id:project._id}).select('_id').lean();    
+      if (tableproject!=null) {    
+        tableproject.count = await TableProjectsModel.find({project_id:project._id}).count();    
+        var subitem = await SubItemModel.findOne({table_project_id:tableproject._id}).select('_id').lean();
+        // console.log(subitem==null)
+        if (subitem!=null) {    
+          subitem.count = await SubItemModel.find({table_project_id:tableproject._id}).count();
+        }else{
+          subitem = {count:0}
+        }
+      }else{
+        var subitem = {count:0}
+        tableproject={count:0}
+      }
+    } else{      
+      var tableproject={count:0}
+      var subitem={count:0}
+      project={count:0}
     }
     const user = await UsersModel.find().count();
     // if (!groupproject) return res.status(404).json({ status: 0, message: `Data not Found` });
@@ -40,7 +49,7 @@ export const getContentsCard = async (req, res) => {
 
     return res
       .status(200)
-      .json({ status: 1, message: `Get All contents for dashboard`, groupproject, project, tableproject, subitem,user });
+      .json({ status: 1, message: `Get All contents for dashboard`, groupproject,project,tableproject,subitem,user });
   } catch (error) {
     return res
       .status(400)
