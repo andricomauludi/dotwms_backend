@@ -7,6 +7,7 @@ import {
   createProject,
   createSubItem,
   createTableProject,
+  deleteContentPosting,
   deleteGroupProject,
   deleteProject,
   deleteSubItem,
@@ -29,22 +30,26 @@ const router = express.Router();
 // membuat konfigurasi diskStorage multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    if (file.fieldname === "contenttext") {
-      cb(null, "./assets/contenttext/");
-    } else if (file.fieldname === "contentposting") {
+    // if (file.fieldname === "contenttext") {
+    //   cb(null, "./assets/contenttext/");
+    // } else 
+    if (file.fieldname === "contentposting") {
       cb(null, "./assets/contentposting/");
-    } else if (file.fieldname === "postingcaption") {
-      cb(null, "./assets/postingcaption/");
-    }
+    } 
+    // else if (file.fieldname === "postingcaption") {
+    //   cb(null, "./assets/postingcaption/");
+    // }
   },
   filename: (req, file, cb) => {
-    if (file.fieldname === "contenttext") {
+    // if (file.fieldname === "contenttext") {
+    //   cb(null, Date.now() + "-" + file.originalname);
+    // } else 
+    if (file.fieldname === "contentposting") {
       cb(null, Date.now() + "-" + file.originalname);
-    } else if (file.fieldname === "contentposting") {
-      cb(null, Date.now() + "-" + file.originalname);
-    } else if (file.fieldname === "postingcaption") {
-      cb(null, Date.now() + "-" + file.originalname);
-    }
+    } 
+    // else if (file.fieldname === "postingcaption") {
+    //   cb(null, Date.now() + "-" + file.originalname);
+    // }
   },
 });
 
@@ -58,19 +63,20 @@ const uploads = multer({
   },
 });
 function checkFileType(file, cb) {
-  if (file.fieldname === "contenttext" || file.fieldname === "postingcaption") {
-    if (
-      file.mimetype === "application/pdf" ||
-      file.mimetype === "application/msword" ||
-      file.mimetype ===
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    ) {
-      // check file type to be pdf, doc, or docx
-      cb(null, true);
-    } else {
-      cb(null, false); // else fails
-    }
-  } else if (file.fieldname === "contentposting") {
+  // if (file.fieldname === "contenttext" || file.fieldname === "postingcaption") {
+  //   if (
+  //     file.mimetype === "application/pdf" ||
+  //     file.mimetype === "application/msword" ||
+  //     file.mimetype ===
+  //       "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  //   ) {
+  //     // check file type to be pdf, doc, or docx
+  //     cb(null, true);
+  //   } else {
+  //     cb(null, false); // else fails
+  //   }
+  // } else 
+  if (file.fieldname === "contentposting") {
     if (
       file.mimetype === "image/png" ||
       file.mimetype === "image/jpg" ||
@@ -86,9 +92,9 @@ function checkFileType(file, cb) {
 }
 //at the save function
 const multipleUpload = uploads.fields([
-  { name: "contenttext", maxCount: 1 },
+  // { name: "contenttext", maxCount: 1 },
   { name: "contentposting"},
-  { name: "postingcaption", maxCount: 1 },
+  // { name: "postingcaption", maxCount: 1 },
 ]);
 
 //RESTful API ini menggunakan x-www-form-urlencoded
@@ -131,6 +137,7 @@ router.patch(
   editTableProject
 );
 router.delete("/delete-table-project/:id", verifyToken, deleteTableProject);
+router.delete("/delete-content-posting",uploads.none(), verifyToken, deleteContentPosting);
 
 router.post("/create-sub-item", uploads.none(), verifyToken, createSubItem);
 router.patch("/edit-sub-item", uploads.none(), verifyToken, editSubItem);

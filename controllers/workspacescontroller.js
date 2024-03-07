@@ -64,39 +64,105 @@ export const createProject = async (req, res) => {
       .status(201);
 };
 
-export const createUpdateContentPosting = async (req, res) => {
-  console.log(contentposting);
-  let itemsUpload = contentposting.map(item => {    
+async function createUpdateContentPosting(
+  newDocument,
+  projectid,
+  contentposting,
+  res
+) {
+  let query = { _id: newDocument._id };
+  const tableproject = await TableProjectsModel.find(query);
+
+  //MASUK CREATE
+
+  // if (!tableproject) {
+  let itemsUpload = contentposting.map((item) => {
     return {
       _id: uuidv4(),
+      project_id: newDocument.project_id,
+      project_name: newDocument.project_name,
       table_project_id: projectid,
       table_project_name: newDocument.item,
       file_name: item.filename,
-      created_at : new Date(),
-      updated_at : new Date(),
-      created_by : newDocument.created_by,
-      updated_by : newDocument.updated_by
+      created_at: new Date(),
+      updated_at: new Date(),
+      created_by: newDocument.created_by,
+      updated_by: newDocument.updated_by,
     };
   });
-  
 
-  const result2 = await ContentPostingsModel.insertMany(itemsUpload);  
-  if (!result2)
-    res
-      .send({
-        status: 0,
-        message: `Cannot create/update data in database`,
-        result2,
-      })
-      .status(404);
-  else
-    res
-      .send({
-        status: 1,
-        message: "Content Posting created/updated",
-        result2,
-      })
-      .status(201);
+  const result = await ContentPostingsModel.insertMany(itemsUpload);
+  if (!result) {
+    const hasilgakbener = 0;
+    return hasilgakbener;
+  }
+  const hasilbener = 1;
+  return hasilbener;
+  // }
+  // else {
+  //   // MASUK UPDATE
+  //   console.log("masuk updatee");
+  //   let itemsUpload = contentposting.map((item) => {
+  //     return {
+  //       _id: uuidv4(),
+  //       table_project_id: projectid,
+  //       table_project_name: newDocument.item,
+  //       file_name: item.filename,
+  //       created_at: new Date(),
+  //       updated_at: new Date(),
+  //       created_by: newDocument.created_by,
+  //       updated_by: newDocument.updated_by,
+  //     };
+  //   });
+  //   const query = { table_project_id: newDocument._id };
+  //   await ContentPostingsModel.deleteMany(query);
+
+  //   const result = await ContentPostingsModel.insertMany(itemsUpload);
+  //   if (!result) {
+  //     const hasilgakbener = 0;
+  //     return hasilgakbener;
+  //   }
+  //   const hasilbener = 1;
+  //   return hasilbener;
+  // }
+}
+export const deleteContentPosting = async (req, res) => {
+  const ids = req.body.id;
+  const myArray = ids.split(",");
+  console.log(myArray);
+
+  const result = await ContentPostingsModel.deleteMany({
+    _id: { $in: myArray },      //bulking delete
+  });
+  if (result) {
+    return res.send("record deleted");
+  }
+  return res.send("error brok")
+
+  // var idList = ["559e0dbd045ac712fa1f19fa","559e0dbe045ac712fa1f19fb"];
+
+  // var pincode = mongoose.model('pincode');
+
+  // pincode.find({ "city_id": { "$in": idList } },function(err,docs) {
+  //    // do something here
+  // });
+
+  // try {
+  //   const query = { file_name: req.params.file_name };
+  //   let result = await UsersModel.deleteOne(query);
+
+  //   if (!result)
+  //     return res.status(404).json({ status: 0, message: `Data not Found` });
+
+  //   return res.status(200).json({
+  //     status: 1,
+  //     message: `User with id ` + req.params.id + ` is deleted`,
+  //   });
+  // } catch (error) {
+  //   return res
+  //     .status(400)
+  //     .json({ status: -1, message: `Error on delete user` });
+  // }
 };
 export const createTableProject = async (req, res) => {
   // Create a new blog post object
@@ -124,17 +190,28 @@ export const createTableProject = async (req, res) => {
   // if (contenttext) newDocument.contenttext = contenttext[0].filename;
   // if (postingcaption) newDocument.postingcaption = postingcaption[0].filename;
 
-  
-
   // Orders.insertMany(items)
   //   .then(() => {
   //     console.log("Orders Added!");
   //     res.status(200).json("Order Added!");
   //   })
   //   .catch(err => res.status(400).json("Error: " + err));
-  throw new Error("my error messages");
+  const resultContentPosting = await createUpdateContentPosting(
+    newDocument,
+    projectid,
+    contentposting
+  );  
+  if (resultContentPosting == 0) {
+    res
+      .send({
+        status: 0,
+        message: `Error while upload file, please try again`,
+        result,
+      })
+      .status(404);
+  } 
 
-  const result = await TableProjectsModel.create(newDocument);  
+  const result = await TableProjectsModel.create(newDocument);
 
   if (!result)
     res

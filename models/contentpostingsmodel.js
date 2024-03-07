@@ -4,6 +4,8 @@ const { Schema, model } = mongoose;
 
 const contentPostingSchema = new Schema({
   _id: String,
+  project_id:String,
+  project_name:String,
   table_project_id:String,
   table_project_name:String,
   file_name:String,  
