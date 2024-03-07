@@ -17,7 +17,6 @@ const tableProjectSchema = new Schema({
   contentcategory: String,
   contenttextlink: String,
   contenttext: String,
-  contentposting: String,
   postingcaption: String,
   postingstatus: String,  
   created_by: String,

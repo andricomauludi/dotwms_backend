@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import jwt from "jsonwebtoken";
 import ProjectsModel from "../models/projectsmodel.js";
 import TableProjectsModel from "../models/tableprojectsmodel.js";
+import ContentPostingsModel from "../models/contentpostingsmodel.js";
 import express from "express";
 import fs from "fs";
 import SubItemModel from "../models/subitemmodel.js";
@@ -62,22 +63,78 @@ export const createProject = async (req, res) => {
       })
       .status(201);
 };
+
+export const createUpdateContentPosting = async (req, res) => {
+  console.log(contentposting);
+  let itemsUpload = contentposting.map(item => {    
+    return {
+      _id: uuidv4(),
+      table_project_id: projectid,
+      table_project_name: newDocument.item,
+      file_name: item.filename,
+      created_at : new Date(),
+      updated_at : new Date(),
+      created_by : newDocument.created_by,
+      updated_by : newDocument.updated_by
+    };
+  });
+  
+
+  const result2 = await ContentPostingsModel.insertMany(itemsUpload);  
+  if (!result2)
+    res
+      .send({
+        status: 0,
+        message: `Cannot create/update data in database`,
+        result2,
+      })
+      .status(404);
+  else
+    res
+      .send({
+        status: 1,
+        message: "Content Posting created/updated",
+        result2,
+      })
+      .status(201);
+};
 export const createTableProject = async (req, res) => {
   // Create a new blog post object
   let newDocument = req.body;
+
   const projectid = uuidv4(); //generate user id
   newDocument._id = projectid;
   newDocument.created_at = new Date();
   // foto = req.file
   // const contenttext = req.files["contenttext"];
   const contentposting = req.files["contentposting"];
-  const postingcaption = req.files["postingcaption"];
+  // const postingcaption = req.files["postingcaption"];
+  // console.log(contentposting[0].filename)
+  // throw new Error("my error message");
+  if (contentposting.length > 1) {
+    for (let i = 0; i < contentposting.length; i++) {
+      newDocument.contentposting = contentposting[i].filename;
+    }
+  } else {
+    if (contentposting) {
+      newDocument.contentposting = contentposting[0].filename;
+    }
+  }
 
   // if (contenttext) newDocument.contenttext = contenttext[0].filename;
-  if (contentposting) newDocument.contentposting = contentposting[0].filename;
-  if (postingcaption) newDocument.postingcaption = postingcaption[0].filename;
+  // if (postingcaption) newDocument.postingcaption = postingcaption[0].filename;
 
-  const result = await TableProjectsModel.create(newDocument);
+  
+
+  // Orders.insertMany(items)
+  //   .then(() => {
+  //     console.log("Orders Added!");
+  //     res.status(200).json("Order Added!");
+  //   })
+  //   .catch(err => res.status(400).json("Error: " + err));
+  throw new Error("my error messages");
+
+  const result = await TableProjectsModel.create(newDocument);  
 
   if (!result)
     res
@@ -302,7 +359,7 @@ function base64Encode(inputFileName, content) {
     );
     return contents;
   }
-  const contents = ""
+  const contents = "";
 
   return contents;
 }
@@ -332,7 +389,7 @@ export const getMe = async (req, res) => {
     req.userId = decoded.userId;
   });
 
-  let query = { _id: req.userId };  
+  let query = { _id: req.userId };
 
   try {
     const user = await UsersModel.findOne(query).select(
@@ -543,9 +600,8 @@ export const editTableProject = async (req, res) => {
     delete newDocument.contentposting;
   } else {
     if (req.files["contentposting"])
-    newDocument.contentposting = req.files["contentposting"][0].filename;  
-}
-
+      newDocument.contentposting = req.files["contentposting"][0].filename;
+  }
 
   const updates = {
     $set: newDocument,

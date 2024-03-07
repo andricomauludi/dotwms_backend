@@ -51,7 +51,7 @@ const storage = multer.diskStorage({
 const uploads = multer({
   storage: storage,
   limits: {
-    fileSize: 1024 * 1024 * 10,
+    fileSize: 1024 * 1024 * 300, //300MB
   },
   fileFilter: (req, file, cb) => {
     checkFileType(file, cb);
@@ -75,19 +75,19 @@ function checkFileType(file, cb) {
       file.mimetype === "image/png" ||
       file.mimetype === "image/jpg" ||
       file.mimetype === "image/jpeg" ||
-      file.mimetype === "image/gif"
+      file.mimetype === "image/gif" || file.mimetype === "video/x-matroska" || file.mimetype === "video/mp4"
     ) {
       // check file type to be png, jpeg, or jpg
       cb(null, true);
     } else {
-      cb(null, false); // else fails
+      cb(null, true); // else fails
     }
   }
 }
 //at the save function
 const multipleUpload = uploads.fields([
   { name: "contenttext", maxCount: 1 },
-  { name: "contentposting", maxCount: 1 },
+  { name: "contentposting"},
   { name: "postingcaption", maxCount: 1 },
 ]);
 
