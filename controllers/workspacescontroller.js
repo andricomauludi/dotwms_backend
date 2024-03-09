@@ -128,16 +128,40 @@ async function createUpdateContentPosting(
 }
 export const deleteContentPosting = async (req, res) => {
   const ids = req.body.id;
-  const myArray = ids.split(",");
-  console.log(myArray);
+  const filename = req.body.file_name;
+
+  for (let i = 0; i < filename.length; i++) {
+    const path = "./assets/contentposting/" + filename[i];
+    fs.unlink(path, (err) => {
+      if (err) {
+        res
+          .send({
+            status: -1,
+            message: "Error while deleting file on directory",
+            err,
+          })
+          .status(401);
+      }
+    });
+  }
 
   const result = await ContentPostingsModel.deleteMany({
-    _id: { $in: myArray },      //bulking delete
+    _id: { $in: ids }, //bulking delete
   });
   if (result) {
-    return res.send("record deleted");
+    return res
+      .send({
+        status: 1,
+        message: "Content Posting deleted successfully",
+      })
+      .status(200);
   }
-  return res.send("error brok")
+  return res
+    .send({
+      status: 1,
+      message: "Failed while deleting data on database",
+    })
+    .status(400);
 
   // var idList = ["559e0dbd045ac712fa1f19fa","559e0dbe045ac712fa1f19fb"];
 
@@ -200,7 +224,7 @@ export const createTableProject = async (req, res) => {
     newDocument,
     projectid,
     contentposting
-  );  
+  );
   if (resultContentPosting == 0) {
     res
       .send({
@@ -209,7 +233,7 @@ export const createTableProject = async (req, res) => {
         result,
       })
       .status(404);
-  } 
+  }
 
   const result = await TableProjectsModel.create(newDocument);
 
