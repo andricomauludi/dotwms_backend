@@ -1,0 +1,53 @@
+Arguments: 
+  C:\Program Files\nodejs\node.exe C:\Users\SCC1202200986\AppData\Roaming\npm\node_modules\yarn\bin\yarn.js add cors dotenv throttle @types/cors @types/dotenv @types/throttle
+
+PATH: 
+  C:\Program Files (x86)\Common Files\Oracle\Java\javapath;C:\xampp\php;C:\Users\SCC1202200986\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Python 3.9;C:\xampp\php\php.exe\;C:\Users\SCC1202200986\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\SCC1202200986\AppData\Local\Programs\Python\Python39\python.exe;C:\Users\SCC1202200986\AppData\Local\Programs\Python\Python39;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\ProgramData\ComposerSetup\bin;C:\xampp\php;C:\Program Files\Go\bin;C:\Program Files\Azure Data Studio\bin;C:\Program Files\dotnet\;C:\Program Files\GitHub CLI\;C:\Program Files\Microsoft SQL Server\150\Tools\Binn\;C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\;C:\Program Files\Docker\Docker\resources\bin;C:\PSTools\psping.exe;%AppData%\Roaming\npm;%AppData%\npm\node_modules;C:\Users\SCC1202200986\AppData\Roaming\npm;D:\usr\local;C:\Users\SCC1202200986\AppData\Roaming\nvm;C:\Program Files\nodejs;C:\Users\SCC1202200986\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Python 3.9;C:\xampp\php;C:\Users\SCC1202200986\AppData\Local\Programs\Python\Python39\python.exe;C:\Users\SCC1202200986\AppData\Local\Programs\Python\Python39;C:\Users\SCC1202200986\AppData\Local\Microsoft\WindowsApps;C:\Users\SCC1202200986\AppData\Roaming\Composer\vendor\bin;C:\Users\SCC1202200986\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\SCC1202200986\AppData\Local\GitHubDesktop\bin;C:\Users\SCC1202200986\go\bin;C:\Program Files\Git\bin;C:\Program Files\Git\cmd;C:\Program Files\Azure Data Studio\bin;C:\Users\SCC1202200986\AppData\Local\Programs\Azure Data Studio\bin;C:\Users\SCC1202200986\.dotnet\tools;C:\Users\SCC1202200986\AppData\Roaming\npm;C:\Users\SCC1202200986\AppData\Roaming\nvm;C:\Program Files\nodejs;D:\Fiddler
+
+Yarn version: 
+  1.22.19
+
+Node version: 
+  20.10.0
+
+Platform: 
+  win32 x64
+
+Trace: 
+  Error: EPERM: operation not permitted, unlink 'D:\Documents\Andrico\KERJA\Freelance\DOTS WMS\website\dotswms-backend\node_modules\bcrypt\lib\binding\napi-v3\bcrypt_lib.node'
+
+npm manifest: 
+  {
+    "name": "dotswms-backend",
+    "version": "1.0.0",
+    "description": "backend dot work management system",
+    "main": "app.js",
+    "type": "module",
+    "scripts": {
+      "start": "nodemon app.js"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+      "bcrypt": "^5.1.1",
+      "body-parser": "^1.20.2",
+      "cookie-parser": "^1.4.6",
+      "cors": "^2.8.5",
+      "dotenv": "^16.3.1",
+      "express": "^4.18.2",
+      "jsonwebtoken": "^9.0.2",
+      "mongoose": "^8.0.0",
+      "multer": "^1.4.5-lts.1",
+      "node-fetch": "^2.6.1",
+      "uuid": "^9.0.1"
+    },
+    "devDependencies": {
+      "nodemon": "^3.0.1"
+    }
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile

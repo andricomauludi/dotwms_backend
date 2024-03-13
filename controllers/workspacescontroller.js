@@ -64,6 +64,40 @@ export const createProject = async (req, res) => {
       .status(201);
 };
 
+export const streamVideo = async (req, res) => {
+  let file_name =  req.params.name ;
+
+  const path = "./assets/contentposting/"+file_name;
+  const stat = fs.statSync(path);
+  const fileSize = stat.size;
+  const range = req.headers.range;
+  if (range) {
+    const parts = range.replace(/bytes=/, "").split("-");
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+    const chunksize = end - start + 1;
+    const file = fs.createReadStream(path, { start, end });
+    const head = {
+      "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+      "Accept-Ranges": "bytes",
+      "Content-Length": chunksize,
+      "Content-Type": "video/mp4",
+    };
+
+    res.writeHead(206, head);
+    file.pipe(res);
+  } else {
+    const head = {
+      "Content-Length": fileSize,
+      "Content-Type": "video/mp4",
+    };
+
+    res.writeHead(200, head);
+    fs.createReadStream(path).pipe(res);
+  }
+};
+
 async function createUpdateContentPosting(
   newDocument,
   projectid,
@@ -84,6 +118,7 @@ async function createUpdateContentPosting(
       table_project_id: projectid,
       table_project_name: newDocument.item,
       file_name: item.filename,
+      file_type: item.mimetype,
       created_at: new Date(),
       updated_at: new Date(),
       created_by: newDocument.created_by,
@@ -197,17 +232,34 @@ export const createTableProject = async (req, res) => {
   newDocument.created_at = new Date();
   // foto = req.file
   // const contenttext = req.files["contenttext"];
-  const contentposting = req.files["contentposting"];
+  const contentposting = req.files["contentposting"];  
   // const postingcaption = req.files["postingcaption"];
   // console.log(contentposting[0].filename)
   // throw new Error("my error message");
-  if (contentposting.length > 1) {
-    for (let i = 0; i < contentposting.length; i++) {
-      newDocument.contentposting = contentposting[i].filename;
-    }
-  } else {
-    if (contentposting) {
+  // throw new Error;
+  if (contentposting) {
+    if (contentposting.length > 1) {
+      for (let i = 0; i < contentposting.length; i++) {
+        newDocument.contentposting = contentposting[i].filename;
+      }
+    } else {
+      // if (contentposting) {
       newDocument.contentposting = contentposting[0].filename;
+      // }
+    }
+    const resultContentPosting = await createUpdateContentPosting(
+      newDocument,
+      projectid,
+      contentposting
+    );
+    if (resultContentPosting == 0) {
+      res
+        .send({
+          status: 0,
+          message: `Error while upload file, please try again`,
+          result,
+        })
+        .status(404);
     }
   }
 
@@ -220,20 +272,6 @@ export const createTableProject = async (req, res) => {
   //     res.status(200).json("Order Added!");
   //   })
   //   .catch(err => res.status(400).json("Error: " + err));
-  const resultContentPosting = await createUpdateContentPosting(
-    newDocument,
-    projectid,
-    contentposting
-  );
-  if (resultContentPosting == 0) {
-    res
-      .send({
-        status: 0,
-        message: `Error while upload file, please try again`,
-        result,
-      })
-      .status(404);
-  }
 
   const result = await TableProjectsModel.create(newDocument);
 
@@ -345,6 +383,101 @@ export const getAllSubItemByTable = async (req, res) => {
     });
   }
 };
+export const showContentPosting = async (req, res) => {
+  const body = req.body; //body isinya file_name sama file_type
+  try {
+    if (body.file_type == "video/mp4") {
+      const path = "./assets/contentposting/" + body.file_name;
+      const stat = fs.statSync(path);
+      const fileSize = stat.size;
+      const range = req.headers.range;
+      if (range) {
+        const parts = range.replace(/bytes=/, "").split("-");
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+        const chunksize = end - start + 1;
+        const file = fs.createReadStream(path, { start, end });
+        const head = {
+          "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+          "Accept-Ranges": "bytes",
+          "Content-Length": chunksize,
+          "Content-Type": "video/mp4",
+        };
+
+        res.writeHead(206, head);
+        file.pipe(res);
+        return
+      } else {
+        const head = {
+          "Content-Length": fileSize,
+          "Content-Type": "video/mp4",
+        };
+
+        res.writeHead(200, head);
+        fs.createReadStream(path).pipe(res);
+        return
+      }
+    } else if (
+      body.file_type == "image/png" ||
+      body.file_type == "image/jpeg" ||
+      body.file_type == "image/jpg"
+    ) {
+      const contentfile = base64Encode(body.file_name, "contentposting");
+      
+      
+      return res
+      .status(200)
+      .json({ status: 1, message: `showing base64`, contentfile });
+    }
+
+    return res
+      .status(200)
+      .json({ status: 1, message: `Get All Content Postings`, contentPosting });
+  } catch (error) {
+    return res.status(400).json({
+      status: 0,
+      message: `Error on getting all content postings`,
+      error,
+    });
+  }
+};
+export const getContentPostingByTable = async (req, res) => {
+  try {
+    let query = { table_project_id: req.params.id };
+    const contentPosting = await ContentPostingsModel.find(query)
+      .select()
+      .lean();
+    if (!contentPosting)
+      return res.status(404).json({ status: 0, message: `Data not Found` });
+
+    // for (let i = 0; i < contentPosting.length; i++) {
+    // const contentfile = base64Encode(
+    //   contentPosting[i]["file_name"],
+    //   "contentPosting"
+    // );
+    // contentPosting[i]["file"] = await contentfile;
+    // if (contentPosting[i]['file_type']=="video/mp4") {
+
+    // }
+    // const contents = fs.readFileSync(
+    //   `./assets/` + "contentPosting" + `/` + contentPosting[i]["file_name"]
+    // );
+    // console.log(contentPosting[i]["file_name"]);
+    // }
+
+    return res
+      .status(200)
+      .json({ status: 1, message: `Get All Content Postings`, contentPosting });
+  } catch (error) {
+    return res.status(400).json({
+      status: 0,
+      message: `Error on getting all content postings`,
+      error,
+    });
+  }
+};
+
 export const getProjectByGroupProject = async (req, res) => {
   //cari dari project id
   try {
@@ -394,12 +527,12 @@ export const getAllTableByProject = async (req, res) => {
         "profile_picture"
       );
       tableproject[i]["updated_by_avatar"] = await contentsavatarupdatedby;
-      tableproject[i]["contentpostingname"] = tableproject[i]["contentposting"];
-      const contentposting = base64Encode(
-        tableproject[i]["contentposting"],
-        "contentposting"
-      );
-      tableproject[i]["contentposting"] = await contentposting;
+      // tableproject[i]["contentpostingname"] = tableproject[i]["contentposting"];
+      // const contentposting = base64Encode(
+      //   tableproject[i]["contentposting"],
+      //   "contentposting"
+      // );
+      // tableproject[i]["contentposting"] = await contentposting;
     }
 
     return res

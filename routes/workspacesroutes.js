@@ -21,7 +21,10 @@ import {
   getAllProject,
   getAllSubItemByTable,
   getAllTableByProject,
+  getContentPostingByTable,
   getProjectByGroupProject,
+  showContentPosting,
+  streamVideo,
 } from "../controllers/workspacescontroller.js";
 import { myTask, myTaskDone } from "../controllers/mytaskcontroller.js";
 
@@ -32,10 +35,10 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     // if (file.fieldname === "contenttext") {
     //   cb(null, "./assets/contenttext/");
-    // } else 
+    // } else
     if (file.fieldname === "contentposting") {
       cb(null, "./assets/contentposting/");
-    } 
+    }
     // else if (file.fieldname === "postingcaption") {
     //   cb(null, "./assets/postingcaption/");
     // }
@@ -43,10 +46,10 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => {
     // if (file.fieldname === "contenttext") {
     //   cb(null, Date.now() + "-" + file.originalname);
-    // } else 
+    // } else
     if (file.fieldname === "contentposting") {
       cb(null, Date.now() + "-" + file.originalname);
-    } 
+    }
     // else if (file.fieldname === "postingcaption") {
     //   cb(null, Date.now() + "-" + file.originalname);
     // }
@@ -75,13 +78,15 @@ function checkFileType(file, cb) {
   //   } else {
   //     cb(null, false); // else fails
   //   }
-  // } else 
+  // } else
   if (file.fieldname === "contentposting") {
     if (
       file.mimetype === "image/png" ||
       file.mimetype === "image/jpg" ||
       file.mimetype === "image/jpeg" ||
-      file.mimetype === "image/gif" || file.mimetype === "video/x-matroska" || file.mimetype === "video/mp4"
+      file.mimetype === "image/gif" ||
+      file.mimetype === "video/x-matroska" ||
+      file.mimetype === "video/mp4"
     ) {
       // check file type to be png, jpeg, or jpg
       cb(null, true);
@@ -93,7 +98,7 @@ function checkFileType(file, cb) {
 //at the save function
 const multipleUpload = uploads.fields([
   // { name: "contenttext", maxCount: 1 },
-  { name: "contentposting"},
+  { name: "contentposting" },
   // { name: "postingcaption", maxCount: 1 },
 ]);
 
@@ -106,6 +111,7 @@ router.post(
   verifyToken,
   createGroupProject
 );
+router.get("/stream-video/:name", streamVideo);
 router.get("/all-group-project", verifyToken, getAllGroupProject);
 router.delete("/delete-group-project/:id", verifyToken, deleteGroupProject);
 router.patch(
@@ -113,13 +119,13 @@ router.patch(
   uploads.none(),
   verifyToken,
   editGroupProject
-  );
-  router.get("/get-project-specific/:id", verifyToken, getProjectByGroupProject);
-  
-  router.post("/create-project", uploads.none(), verifyToken, createProject);
-  router.get("/all-project", verifyToken, getAllProject);
-  router.patch("/edit-project", uploads.none(), verifyToken, editProject);
-  router.delete("/delete-project/:id", verifyToken, deleteProject);
+);
+router.get("/get-project-specific/:id", verifyToken, getProjectByGroupProject);
+
+router.post("/create-project", uploads.none(), verifyToken, createProject);
+router.get("/all-project", verifyToken, getAllProject);
+router.patch("/edit-project", uploads.none(), verifyToken, editProject);
+router.delete("/delete-project/:id", verifyToken, deleteProject);
 
 router.post(
   "/create-table-project",
@@ -137,7 +143,12 @@ router.patch(
   editTableProject
 );
 router.delete("/delete-table-project/:id", verifyToken, deleteTableProject);
-router.delete("/delete-content-posting",uploads.none(), verifyToken, deleteContentPosting);
+router.delete(
+  "/delete-content-posting",
+  uploads.none(),
+  verifyToken,
+  deleteContentPosting
+);
 
 router.post("/create-sub-item", uploads.none(), verifyToken, createSubItem);
 router.patch("/edit-sub-item", uploads.none(), verifyToken, editSubItem);
@@ -147,6 +158,13 @@ router.get(
   uploads.none(),
   verifyToken,
   getAllSubItemByTable
+);
+router.post("/show-content-posting", uploads.none(), verifyToken, showContentPosting);
+router.get(
+  "/content-posting/:id",
+  uploads.none(),
+  verifyToken,
+  getContentPostingByTable
 );
 router.get("/my-task/:id", uploads.none(), verifyToken, myTask);
 router.get("/my-task-done/:id", uploads.none(), verifyToken, myTaskDone);

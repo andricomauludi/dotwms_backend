@@ -9,6 +9,7 @@ const contentPostingSchema = new Schema({
   table_project_id:String,
   table_project_name:String,
   file_name:String,  
+  file_type:String,  
   created_by: String,
   updated_by: String,
   created_at: Date,
