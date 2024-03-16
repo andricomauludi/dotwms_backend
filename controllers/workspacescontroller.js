@@ -65,9 +65,9 @@ export const createProject = async (req, res) => {
 };
 
 export const streamVideo = async (req, res) => {
-  let file_name =  req.params.name ;
+  let file_name = req.params.name;
 
-  const path = "./assets/contentposting/"+file_name;
+  const path = "./assets/contentposting/" + file_name;
   const stat = fs.statSync(path);
   const fileSize = stat.size;
   const range = req.headers.range;
@@ -163,10 +163,17 @@ async function createUpdateContentPosting(
 }
 export const deleteContentPosting = async (req, res) => {
   const ids = req.body.id;
-  const filename = req.body.file_name;
 
-  for (let i = 0; i < filename.length; i++) {
-    const path = "./assets/contentposting/" + filename[i];
+  const contentposting = await ContentPostingsModel.find(
+    {
+      _id: {
+        $in: ids,
+      },
+    },    
+  ).select({ "file_name": 1, "_id": 0});
+
+  for (let i = 0; i < contentposting.length; i++) {
+    const path = "./assets/contentposting/" + contentposting[i].file_name;
     fs.unlink(path, (err) => {
       if (err) {
         res
@@ -232,7 +239,7 @@ export const createTableProject = async (req, res) => {
   newDocument.created_at = new Date();
   // foto = req.file
   // const contenttext = req.files["contenttext"];
-  const contentposting = req.files["contentposting"];  
+  const contentposting = req.files["contentposting"];
   // const postingcaption = req.files["postingcaption"];
   // console.log(contentposting[0].filename)
   // throw new Error("my error message");
@@ -407,7 +414,7 @@ export const showContentPosting = async (req, res) => {
 
         res.writeHead(206, head);
         file.pipe(res);
-        return
+        return;
       } else {
         const head = {
           "Content-Length": fileSize,
@@ -416,7 +423,7 @@ export const showContentPosting = async (req, res) => {
 
         res.writeHead(200, head);
         fs.createReadStream(path).pipe(res);
-        return
+        return;
       }
     } else if (
       body.file_type == "image/png" ||
@@ -424,11 +431,10 @@ export const showContentPosting = async (req, res) => {
       body.file_type == "image/jpg"
     ) {
       const contentfile = base64Encode(body.file_name, "contentposting");
-      
-      
+
       return res
-      .status(200)
-      .json({ status: 1, message: `showing base64`, contentfile });
+        .status(200)
+        .json({ status: 1, message: `showing base64`, contentfile });
     }
 
     return res
@@ -830,13 +836,34 @@ export const editSubItem = async (req, res) => {
 export const editTableProject = async (req, res) => {
   let newDocument = req.body;
   const query = { _id: newDocument._id }; //pake ini kalo idnya pake uuid
-  if (req.files["contentposting"] === undefined) {
-    delete newDocument.contentposting;
-  } else {
-    if (req.files["contentposting"])
-      newDocument.contentposting = req.files["contentposting"][0].filename;
-  }
 
+  const contentposting = req.files["contentposting"];
+
+  if (contentposting) {
+    if (contentposting.length > 1) {
+      for (let i = 0; i < contentposting.length; i++) {
+        newDocument.contentposting = contentposting[i].filename;
+      }
+    } else {
+      // if (contentposting) {
+      newDocument.contentposting = contentposting[0].filename;
+      // }
+    }
+    const resultContentPosting = await createUpdateContentPosting(
+      newDocument,
+      newDocument._id,
+      contentposting
+    );
+    if (resultContentPosting == 0) {
+      res
+        .send({
+          status: 0,
+          message: `Error while upload file, please try again`,
+          result,
+        })
+        .status(401);
+    }
+  }
   const updates = {
     $set: newDocument,
   };
