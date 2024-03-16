@@ -143,7 +143,7 @@ router.patch(
   editTableProject
 );
 router.delete("/delete-table-project/:id", verifyToken, deleteTableProject);
-router.delete(
+router.post(
   "/delete-content-posting",
   uploads.none(),
   verifyToken,
