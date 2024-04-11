@@ -119,8 +119,8 @@ async function createUpdateContentPosting(
       table_project_name: newDocument.item,
       file_name: item.filename,
       file_type: item.mimetype,
-      created_at: new Date.now(),
-      updated_at: new Date.now(),
+      created_at: new Date(),
+      updated_at: new Date(),
       created_by: newDocument.created_by,
       updated_by: newDocument.updated_by,
     };
