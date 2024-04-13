@@ -63,8 +63,7 @@ export const myTask = async (req, res) => {
       if (!tableprojectid)
         return res
           .status(404)
-          .json({ status: 0, message: `Table project id not Found` });
-      console.log(subItem);
+          .json({ status: 0, message: `Table project id not Found` });      
       let query2 = { _id: tableprojectid[0]["project_id"] };
       const projectid = await ProjectModel.find(query2)
         .select
@@ -95,8 +94,7 @@ export const myTask = async (req, res) => {
     }
 
     return res.status(200).json({ status: 1, message: `Get My Task`, subItem });
-  } catch (error) {
-    console.log(error);
+  } catch (error) {    
     return res.status(400).json({
       status: 0,
       message: `Error on getting my task`,
@@ -156,8 +154,7 @@ export const myTaskDone = async (req, res) => {
     }
 
     return res.status(200).json({ status: 1, message: `Get My Task`, subItem });
-  } catch (error) {
-    console.log(error);
+  } catch (error) {    
     return res.status(400).json({
       status: 0,
       message: `Error on getting my task`,
