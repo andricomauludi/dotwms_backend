@@ -6,7 +6,6 @@ import TableProjectModel from "../models/tableprojectsmodel.js";
 import ProjectModel from "../models/projectsmodel.js";
 import GroupProjectModel from "../models/groupprojectmodel.js";
 
-
 const app = express();
 
 uuidv4();
@@ -42,8 +41,8 @@ export const myTaskOld = async (req, res) => {
 };
 export const myTask = async (req, res) => {
   try {
-    let query = { owner_email: req.params.id };  
-    var hasil=[];
+    let query = { owner_email: req.params.id };
+    var hasil = [];
     const subItem = await SubItemModel.find(query)
       .where("status")
       .in(["not yet", "on progress"])
@@ -51,39 +50,52 @@ export const myTask = async (req, res) => {
       // "-_id"
       ()
       .lean()
-      .sort({created_at:-1})
+      .sort({ created_at: -1 });
     if (!subItem)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
     for (let i = 0; i < subItem.length; i++) {
-      let query = { _id: subItem[i]["table_project_id"]};
+      let query = { _id: subItem[i]["table_project_id"] };
       const tableprojectid = await TableProjectModel.find(query)
         .select
         // "-_id"
         ();
-      let query2 = { _id: tableprojectid[0]["project_id"]};
+      if (!tableprojectid)
+        return res
+          .status(404)
+          .json({ status: 0, message: `Table project id not Found` });
+      let query2 = { _id: tableprojectid[0]["project_id"] };
       const projectid = await ProjectModel.find(query2)
         .select
         // "-_id"
         ();
-      let query3 = { _id: projectid[0]["group_project_id"]};
+      if (!projectid)
+        return res
+          .status(404)
+          .json({ status: 0, message: `Project id not Found` });
+
+      let query3 = { _id: projectid[0]["group_project_id"] };
       const groupproject = await GroupProjectModel.find(query3)
         .select
         // "-_id"
         ();
+      if (!groupproject)
+        return res
+          .status(404)
+          .json({ status: 0, message: `Group Project not Found` });
       const contentsavatar = base64Encode(
         subItem[i]["avatar"],
         "profile_picture"
-      );                 
+      );
       subItem[i]["avatar"] = await contentsavatar;
-      subItem[i]["item"] = await tableprojectid[0]['item'];
-      subItem[i]["project_name"] = await projectid[0]['project_name'];
-      subItem[i]["group_project_name"] = await groupproject[0]['group_project'];
+      subItem[i]["item"] = await tableprojectid[0]["item"];
+      subItem[i]["project_name"] = await projectid[0]["project_name"];
+      subItem[i]["group_project_name"] = await groupproject[0]["group_project"];
     }
 
     return res.status(200).json({ status: 1, message: `Get My Task`, subItem });
   } catch (error) {
-    console.log(error)
+    console.log(error);
     return res.status(400).json({
       status: 0,
       message: `Error on getting my task`,
@@ -104,35 +116,47 @@ export const myTaskDone = async (req, res) => {
     if (!subItem)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
-      for (let i = 0; i < subItem.length; i++) {
-        let query = { _id: subItem[i]["table_project_id"]};
-        const tableprojectid = await TableProjectModel.find(query)
-          .select
-          // "-_id"
-          ();
-        let query2 = { _id: tableprojectid[0]["project_id"]};
-        const projectid = await ProjectModel.find(query2)
-          .select
-          // "-_id"
-          ();
-        let query3 = { _id: projectid[0]["group_project_id"]};
-        const groupproject = await GroupProjectModel.find(query3)
-          .select
-          // "-_id"
-          ();
-        const contentsavatar = base64Encode(
-          subItem[i]["avatar"],
-          "profile_picture"
-        );                 
-        subItem[i]["avatar"] = await contentsavatar;
-        subItem[i]["item"] = await tableprojectid[0]['item'];
-        subItem[i]["project_name"] = await projectid[0]['project_name'];
-        subItem[i]["group_project_name"] = await groupproject[0]['group_project'];
-      }
+    for (let i = 0; i < subItem.length; i++) {
+      let query = { _id: subItem[i]["table_project_id"] };
+      const tableprojectid = await TableProjectModel.find(query)
+        .select
+        // "-_id"
+        ();
+      if (!tableprojectid)
+        return res
+          .status(404)
+          .json({ status: 0, message: `Table project id not Found` });
+      let query2 = { _id: tableprojectid[0]["project_id"] };
+      const projectid = await ProjectModel.find(query2)
+        .select
+        // "-_id"
+        ();
+      if (!projectid)
+        return res
+          .status(404)
+          .json({ status: 0, message: `Project id not Found` });
+      let query3 = { _id: projectid[0]["group_project_id"] };
+      const groupproject = await GroupProjectModel.find(query3)
+        .select
+        // "-_id"
+        ();
+      if (!groupproject)
+        return res
+          .status(404)
+          .json({ status: 0, message: `Group project not Found` });
+      const contentsavatar = base64Encode(
+        subItem[i]["avatar"],
+        "profile_picture"
+      );
+      subItem[i]["avatar"] = await contentsavatar;
+      subItem[i]["item"] = await tableprojectid[0]["item"];
+      subItem[i]["project_name"] = await projectid[0]["project_name"];
+      subItem[i]["group_project_name"] = await groupproject[0]["group_project"];
+    }
 
     return res.status(200).json({ status: 1, message: `Get My Task`, subItem });
   } catch (error) {
-    console.log(error)
+    console.log(error);
     return res.status(400).json({
       status: 0,
       message: `Error on getting my task`,
