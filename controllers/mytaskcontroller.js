@@ -83,6 +83,7 @@ export const myTask = async (req, res) => {
 
     return res.status(200).json({ status: 1, message: `Get My Task`, subItem });
   } catch (error) {
+    console.log(error)
     return res.status(400).json({
       status: 0,
       message: `Error on getting my task`,
@@ -131,6 +132,7 @@ export const myTaskDone = async (req, res) => {
 
     return res.status(200).json({ status: 1, message: `Get My Task`, subItem });
   } catch (error) {
+    console.log(error)
     return res.status(400).json({
       status: 0,
       message: `Error on getting my task`,
