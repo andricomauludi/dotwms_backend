@@ -64,6 +64,7 @@ export const myTask = async (req, res) => {
         return res
           .status(404)
           .json({ status: 0, message: `Table project id not Found` });
+      console.log(tableprojectid);
       let query2 = { _id: tableprojectid[0]["project_id"] };
       const projectid = await ProjectModel.find(query2)
         .select
