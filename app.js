@@ -19,6 +19,7 @@ let corsOptions = {
   optionsSuccessStatus: 200
 } 
 app.use(cors(corsOptions));
+app.options('*', cors()) ;
 app.use(express.json());
 app.use(cookieParser()); //bisa mengambil value dari cookie
 
