@@ -14,7 +14,11 @@ const PORT = 3001; //menjalankan di port 3001
 
 dotenv.config();
 
-app.use(cors());
+let corsOptions = { 
+  origin : ['https://wms.dots.co.id','https://dots.co.id'], 
+  optionsSuccessStatus: 200
+} 
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser()); //bisa mengambil value dari cookie
 
