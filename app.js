@@ -14,12 +14,12 @@ const PORT = 3001; //menjalankan di port 3001
 
 dotenv.config();
 
-let corsOptions = { 
-  origin : ['https://wms.dots.co.id','https://dots.co.id'], 
-  optionsSuccessStatus: 200
-} 
-// app.use(cors(corsOptions));
-app.use(cors({origin:true,credentials: true}));
+// let corsOptions = { 
+//   origin : ['https://wms.dots.co.id','https://dots.co.id'], 
+//   optionsSuccessStatus: 200
+// } 
+// // app.use(cors(corsOptions));
+// app.use(cors({origin:true,credentials: true}));
 // app.options('*', cors()) ;
 app.use(express.json());
 app.use(cookieParser()); //bisa mengambil value dari cookie
@@ -43,6 +43,11 @@ app.use(cookieParser()); //bisa mengambil value dari cookie
 //   // Pass to next layer of middleware
 //   next();
 // });
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
 
 app.use(express.urlencoded({ extended: true })); //extended true akan menghilangkan object :null protoype, kalo false akan muncul si objectnya
 
