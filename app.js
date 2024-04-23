@@ -14,17 +14,22 @@ const PORT = 3001; //menjalankan di port 3001
 
 dotenv.config();
 
-// let corsOptions = { 
-//   origin : ['https://wms.dots.co.id','https://dots.co.id'], 
-//   optionsSuccessStatus: 200
-// } 
-// // app.use(cors(corsOptions));
-// app.use(cors({origin:true,credentials: true}));
-// app.options('*', cors()) ;
+const corsOptions = {
+  origin: '*', // Allow requests from this origin
+  methods: 'GET, POST, OPTIONS, PUT, PATCH, DELETE', // Allow only GET and POST requests
+  allowedHeaders: 'Content-Type,Authorization', // Allow only specified headers  
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors()) ;
+app.use(express.json());
+app.use(cookieParser()); //bisa mengambil value dari cookie
+
+// Add headers before the routes are defined
 app.use(function (req, res, next) {
 
   // Website you wish to allow to connect
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', 'https://wms.dots.co.id');
 
   // Request methods you wish to allow
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
@@ -39,29 +44,7 @@ app.use(function (req, res, next) {
   // Pass to next layer of middleware
   next();
 });
-app.use(express.json());
-app.use(cookieParser()); //bisa mengambil value dari cookie
 
-// Add headers before the routes are defined
-// app.use(function (req, res, next) {
-
-//   // Website you wish to allow to connect
-//   res.setHeader('Access-Control-Allow-Origin', 'https://wms.dots.co.id');
-
-//   // Request methods you wish to allow
-//   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-
-//   // Request headers you wish to allow
-//   res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
-
-//   // Set to true if you need the website to include cookies in the requests sent
-//   // to the API (e.g. in case you use sessions)
-//   res.setHeader('Access-Control-Allow-Credentials', true);
-
-//   // Pass to next layer of middleware
-//   next();
-// });
-// Add headers before the routes are defined
 
 
 app.use(express.urlencoded({ extended: true })); //extended true akan menghilangkan object :null protoype, kalo false akan muncul si objectnya
