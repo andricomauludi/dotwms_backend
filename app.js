@@ -25,6 +25,7 @@ app.options('*', cors()) ;
 app.use(express.json());
 app.use(cookieParser()); //bisa mengambil value dari cookie
 
+
 // // Add headers before the routes are defined
 // app.use(function (req, res, next) {
 
@@ -50,7 +51,6 @@ app.use(cookieParser()); //bisa mengambil value dari cookie
 app.use(express.urlencoded({ extended: true })); //extended true akan menghilangkan object :null protoype, kalo false akan muncul si objectnya
 
 mongoose.connect(process.env.mongodb_connection);
-app.options('/users/login', cors()); 
 
 app.use("/users", usersRoutes);
 app.use("/workspaces", workspacesRoutes);
