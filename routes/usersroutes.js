@@ -15,6 +15,7 @@ import { verifyToken } from "../middleware/verifytoken.js";
 import { refreshToken } from "../controllers/refreshtokencontroller.js";
 
 const router = express.Router();
+router.options(cors()); 
 
 
 
