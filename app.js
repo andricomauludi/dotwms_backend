@@ -22,16 +22,7 @@ const PORT = 3001; //menjalankan di port 3001
 
 // app.use(cors(corsOptions));
 
-const allowedOrigins = ['https://wms.dots.co.id'];
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  }
-}));
+
 // app.options('*', cors()) ;
 
 
@@ -66,6 +57,17 @@ app.use(cookieParser()); //bisa mengambil value dari cookie
 app.use(express.urlencoded({ extended: true })); //extended true akan menghilangkan object :null protoype, kalo false akan muncul si objectnya
 
 mongoose.connect(process.env.mongodb_connection);
+
+const allowedOrigins = ['https://wms.dots.co.id'];
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+}));
 
 app.use("/users", usersRoutes);
 app.use("/workspaces", workspacesRoutes);
