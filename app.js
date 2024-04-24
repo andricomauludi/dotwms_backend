@@ -69,7 +69,7 @@ app.use(cors({
   }
 }));
 
-app.use("/users", usersRoutes);
+app.use("/users", cors(), usersRoutes);
 app.use("/workspaces", workspacesRoutes);
 app.use("/dashboard", dashboardRoutes);
 
