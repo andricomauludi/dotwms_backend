@@ -8,20 +8,35 @@ import usersRoutes from "./routes/usersroutes.js";
 import dashboardRoutes from "./routes/dashboardroutes.js";
 import workspacesRoutes from "./routes/workspacesroutes.js";
 
+dotenv.config();
 
 const app = express();
 const PORT = 3001; //menjalankan di port 3001
 
-dotenv.config();
 
-const corsOptions = {
-  origin: '*', // Allow requests from this origin
-  methods: 'GET, POST, OPTIONS, PUT, PATCH, DELETE', // Allow only GET and POST requests
-  allowedHeaders: 'Content-Type,Authorization', // Allow only specified headers  
-};
+// const corsOptions = {
+//   origin: '*', // Allow requests from this origin
+//   methods: 'GET, POST, OPTIONS, PUT, PATCH, DELETE', // Allow only GET and POST requests
+//   allowedHeaders: 'Content-Type,Authorization', // Allow only specified headers  
+// };
 
-app.use(cors(corsOptions));
-app.options('*', cors()) ;
+// app.use(cors(corsOptions));
+
+const allowedOrigins = ['https://wms.dots.co.id'];
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+}));
+// app.options('*', cors()) ;
+
+
+
+
 app.use(express.json());
 app.use(cookieParser()); //bisa mengambil value dari cookie
 

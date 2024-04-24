@@ -36,12 +36,6 @@ router.delete("/:id", verifyToken, deleteUser);
 
 router.patch("/:id", verifyToken, editUser);
 router.post("/change-password", verifyToken, changePassword);
-router.options('/login', function (req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader('Access-Control-Allow-Methods', '*');
-  res.setHeader("Access-Control-Allow-Headers", "*");
-  res.end();
-});
 router.post("/login", login);
 router.delete("/logout", logout);
 
