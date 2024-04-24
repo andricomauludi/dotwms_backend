@@ -20,7 +20,7 @@ const PORT = 3001; //menjalankan di port 3001
 //   allowedHeaders: 'Content-Type,Authorization', // Allow only specified headers  
 // };
 
-// app.use(cors(corsOptions));
+// app.use(cors());
 
 
 // app.options('*', cors()) ;
@@ -58,18 +58,16 @@ app.use(express.urlencoded({ extended: true })); //extended true akan menghilang
 
 mongoose.connect(process.env.mongodb_connection);
 
-const allowedOrigins = ['https://wms.dots.co.id'];
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  }
-}));
+// const allowedOrigins = ['https://wms.dots.co.id'];
+const corsOptions = {
+  origin: 'https://wms.dots.co.id',
+  credentials: true,
+};
 
-app.use("/users", cors(), usersRoutes);
+app.use(cors(corsOptions));
+// app.use(cors(allowedOrigins));
+
+app.use("/users", usersRoutes);
 app.use("/workspaces", workspacesRoutes);
 app.use("/dashboard", dashboardRoutes);
 
