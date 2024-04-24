@@ -13,7 +13,7 @@ import {
 } from "../controllers/userscontroller.js";
 import { verifyToken } from "../middleware/verifytoken.js";
 import { refreshToken } from "../controllers/refreshtokencontroller.js";
-import cors from "cors";
+
 
 
 const router = express.Router();
@@ -38,7 +38,7 @@ router.delete("/:id", verifyToken, deleteUser);
 
 router.patch("/:id", verifyToken, editUser);
 router.post("/change-password", verifyToken, changePassword);
-router.post("/login",cors(), login);
+router.post("/login", login);
 router.delete("/logout", logout);
 
 router.get("/renew/token", verifyToken, refreshToken);     //  untuk melakukan refresh token tanpa perlu login ulang
