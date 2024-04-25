@@ -59,12 +59,12 @@ app.use(express.urlencoded({ extended: true })); //extended true akan menghilang
 mongoose.connect(process.env.mongodb_connection);
 
 // const allowedOrigins = ['https://wms.dots.co.id'];
-// const corsOptions = {
-//   origin: 'https://wms.dots.co.id',
-//   credentials: true,
-// };
+const corsOptions = {
+  origin: 'https://wms.dots.co.id',
+  credentials: true,
+};
 
-// app.use(cors(corsOptions));
+app.use(cors(corsOptions));
 // app.use(cors(allowedOrigins));
 
 app.use("/users", usersRoutes);
