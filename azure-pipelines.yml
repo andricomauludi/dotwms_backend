@@ -1,14 +1,3 @@
-# Docker
-- task: AzureWebApp@1
-  inputs:
-    azureSubscription: 'Visual Studio Enterprise Subscription – MPN(490c40fd-5b18-49fb-8c18-3cf1d31b4469)'
-    appType: 'webApp'
-    appName: 'backend-expressjs'
-    package: '$(System.DefaultWorkingDirectory)/**/*.zip'
-    deploymentMethod: 'auto'
-# Build a Docker image
-# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
-
 trigger:
 - main
 
@@ -34,3 +23,23 @@ stages:
         dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
         tags: |
           $(tag)
+
+- stage: Deploy
+  displayName: Deploy to Azure Web App
+  jobs:
+  - deployment: Deploy
+    displayName: Deploy
+    pool:
+      vmImage: ubuntu-latest
+    environment: 'dev'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureWebApp@1
+            inputs:
+              azureSubscription: 'Visual Studio Enterprise Subscription – MPN(490c40fd-5b18-49fb-8c18-3cf1d31b4469)'
+              appType: 'webApp'
+              appName: 'backend-expressjs'
+              package: '$(System.DefaultWorkingDirectory)/**/*.zip'
+              deploymentMethod: 'auto'
