@@ -23,6 +23,8 @@ stages:
         dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
         tags: |
           $(tag)
+          
+    - task: PublishBuildArtifacts@1
 
 - stage: Deploy
   displayName: Deploy to Azure Web App
@@ -43,3 +45,4 @@ stages:
               appName: 'backend-expressjs'
               package: '$(System.DefaultWorkingDirectory)/**/*.zip'
               deploymentMethod: 'auto'
+
