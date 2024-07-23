@@ -36,18 +36,15 @@ jobs:
           SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
-          # Install SSH Client
-          sudo apt-get update
-          sudo apt-get install -y sshpass
-
           # Write the SSH private key to a file
           echo "$SSH_PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
 
           # Deploy Docker container to VM
           ssh -o StrictHostKeyChecking=no -i private_key.pem $SSH_USERNAME@$SSH_HOST << 'EOF'
-            docker pull ${{ secrets.DOCKER_IMAGE }}
-            docker stop my-running-container || true
-            docker rm my-running-container || true
-            docker run -d --name my-running-container -p 3001:3001 ${{ secrets.DOCKER_IMAGE }}
+            sudo docker pull ${{ secrets.DOCKER_IMAGE }}
+            sudo docker stop my-running-container || true
+            sudo docker rm my-running-container || true
+            sudo docker run -d --name my-running-container -p 3001:3001 ${{ secrets.DOCKER_IMAGE }}
           EOF
+
