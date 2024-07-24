@@ -38,7 +38,7 @@ app.use("/dashboard", dashboardRoutes);
 app.get("/", (req, res) => {
   res.send("Hello from homepage");
 });
-
+ 
 app.listen(PORT, () =>
   console.log(`server Running on port : http://localhost:${PORT}`)
 ); //untuk menjalankan listen, console log bisa diganti dengan aplikasi rest yang mau kita tampilkan
