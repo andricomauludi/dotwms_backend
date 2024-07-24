@@ -43,8 +43,8 @@ jobs:
           # Deploy Docker container to VM
           ssh -o StrictHostKeyChecking=no -i private_key.pem $SSH_USERNAME@$SSH_HOST << 'EOF'
             sudo docker pull ${{ secrets.DOCKER_IMAGE }}
-            sudo docker stop my-running-container || true
-            sudo docker rm my-running-container || true
-            sudo docker run -d --name my-running-container -p 3001:3001 ${{ secrets.DOCKER_IMAGE }}
+            sudo docker stop dotswms-backend-docker || true
+            sudo docker rm dotswms-backend-docker || true
+            sudo docker run -d --name dotswms-backend-docker -p 3001:3001 ${{ secrets.DOCKER_IMAGE }}
           EOF
 
