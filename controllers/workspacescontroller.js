@@ -379,6 +379,11 @@ export const getAllSubItemByTable = async (req, res) => {
       subItem[i]["avatar"] = await contentsavatar;
     }
 
+    console.log('Emitting subItemData:', subItem);
+    // Emit event to all clients
+    req.io.emit('subItemData', subItem);
+
+
     return res
       .status(200)
       .json({ status: 1, message: `Get All Sub Item`, subItem });
@@ -485,23 +490,27 @@ export const getContentPostingByTable = async (req, res) => {
 };
 
 export const getProjectByGroupProject = async (req, res) => {
-  //cari dari project id
   try {
     let query = { group_project_id: req.params.id };
-    const groupproject = await ProjectsModel.find(query)
-      .select
-      // "-_id"
-      ();
-    if (!groupproject)
-      return res.status(404).json({ status: 0, message: `Data not Found` });
+    const groupproject = await ProjectsModel.find(query).select();
 
-    return res.status(200).json({
+    if (!groupproject) {
+      return res.status(404).json({ status: 0, message: `Data not Found` });
+    }
+
+    // Log the data that will be emitted
+    console.log('Emitting groupProjectData:', groupproject);
+
+    // Emit event to all clients
+    req.io.emit('groupProjectData', groupproject);
+
+    res.status(200).json({
       status: 1,
       message: `Get All Project by Group Project`,
       groupproject,
     });
   } catch (error) {
-    return res.status(400).json({
+    res.status(400).json({
       status: 0,
       message: `Error on getting all project by group project`,
       error,
@@ -540,6 +549,12 @@ export const getAllTableByProject = async (req, res) => {
       // );
       // tableproject[i]["contentposting"] = await contentposting;
     }
+
+    console.log('Emitting tableProjectData:', tableproject);
+
+    // Emit event to all clients
+    req.io.emit('tableProjectData', tableproject);
+
 
     return res
       .status(200)

@@ -3,6 +3,8 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import http from 'http';
+import { Server } from 'socket.io';
 
 import usersRoutes from "./routes/usersroutes.js";
 import dashboardRoutes from "./routes/dashboardroutes.js";
@@ -11,10 +13,32 @@ import workspacesRoutes from "./routes/workspacesroutes.js";
 dotenv.config();
 
 const app = express();
+const server = http.createServer(app);
+// Initialize Socket.IO with the server
+const io = new Server(server, {
+  cors: {
+    // origin: "*", // Allow all origins, adjust this to your needs
+    origin: 'https://wms.dots.co.id',
+    methods: ["GET", "POST"]
+  }
+});
+
+io.on('connection', (socket) => {
+  console.log('A user connected');
+
+  socket.on('disconnect', () => {
+    console.log('A user disconnected');
+  });
+});
+
 const PORT = 3001; //menjalankan di port 3001
 
 app.use(express.json());
 app.use(cookieParser()); //bisa mengambil value dari cookie
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
 
 
 
@@ -24,6 +48,7 @@ mongoose.connect(process.env.mongodb_connection);
 
 const corsOptions = {
   origin: 'https://wms.dots.co.id',
+  // origin: 'http://localhost:3000',
   credentials: true,
 };
 
@@ -39,6 +64,15 @@ app.get("/", (req, res) => {
   res.send("Hello from homepage");
 });
  
-app.listen(PORT, () =>
+server.listen(PORT, () =>
   console.log(`server Running on port : http://localhost:${PORT}`)
 ); //untuk menjalankan listen, console log bisa diganti dengan aplikasi rest yang mau kita tampilkan
+// Socket.IO connection event
+
+// io.on('connection', (socket) => {
+//   console.log('A client connected: ', socket.id);
+
+//   socket.on('disconnect', () => {
+//     console.log('A client disconnected: ', socket.id);
+//   });
+// });
