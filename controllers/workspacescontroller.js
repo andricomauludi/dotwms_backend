@@ -54,7 +54,9 @@ export const createProject = async (req, res) => {
         result,
       })
       .status(404);
-  else
+  else{
+    req.io.emit('newProject', result);
+
     res
       .send({
         status: 1,
@@ -62,6 +64,8 @@ export const createProject = async (req, res) => {
         result,
       })
       .status(201);
+           
+  }
 };
 
 export const streamVideo = async (req, res) => {
@@ -231,73 +235,54 @@ export const deleteContentPosting = async (req, res) => {
   // }
 };
 export const createTableProject = async (req, res) => {
-  // Create a new blog post object
   let newDocument = req.body;
 
-  const projectid = uuidv4(); //generate user id
+  const projectid = uuidv4();
   newDocument._id = projectid;
   newDocument.created_at = new Date();
-  // foto = req.file
-  // const contenttext = req.files["contenttext"];
+  
   const contentposting = req.files["contentposting"];
-  // const postingcaption = req.files["postingcaption"];
-  // console.log(contentposting[0].filename)
-  // throw new Error("my error message");
-  // throw new Error;
+  
   if (contentposting) {
     if (contentposting.length > 1) {
       for (let i = 0; i < contentposting.length; i++) {
         newDocument.contentposting = contentposting[i].filename;
       }
     } else {
-      // if (contentposting) {
       newDocument.contentposting = contentposting[0].filename;
-      // }
     }
+    
     const resultContentPosting = await createUpdateContentPosting(
       newDocument,
       projectid,
       contentposting
     );
-    if (resultContentPosting == 0) {
-      res
-        .send({
-          status: 0,
-          message: `Error while upload file, please try again`,
-          result,
-        })
-        .status(404);
+    
+    if (resultContentPosting === 0) {
+      return res.status(404).send({
+        status: 0,
+        message: `Error while uploading file, please try again`,
+      });
     }
   }
 
-  // if (contenttext) newDocument.contenttext = contenttext[0].filename;
-  // if (postingcaption) newDocument.postingcaption = postingcaption[0].filename;
-
-  // Orders.insertMany(items)
-  //   .then(() => {
-  //     console.log("Orders Added!");
-  //     res.status(200).json("Order Added!");
-  //   })
-  //   .catch(err => res.status(400).json("Error: " + err));
-
   const result = await TableProjectsModel.create(newDocument);
 
-  if (!result)
-    res
-      .send({
-        status: 0,
-        message: `Cannot create data in database`,
-        result,
-      })
-      .status(404);
-  else
-    res
-      .send({
-        status: 1,
-        message: "Table Project created",
-        result,
-      })
-      .status(201);
+  if (!result) {
+    return res.status(404).send({
+      status: 0,
+      message: `Cannot create data in the database`,
+    });
+  }
+
+  // Emit event to all connected clients
+  req.io.emit('newTableProject', newDocument);
+
+  return res.status(201).send({
+    status: 1,
+    message: "Table Project created",
+    result,
+  });
 };
 export const createSubItem = async (req, res) => {
   // Create a new blog post object
@@ -518,47 +503,29 @@ export const getProjectByGroupProject = async (req, res) => {
   }
 };
 export const getAllTableByProject = async (req, res) => {
-  //cari dari project id
   try {
     let query = { project_id: req.params.id };
-    const tableproject = await TableProjectsModel.find(query)
-      .select
-      // "-_id"
-      ()
-      .lean();
-    if (!tableproject)
-      return res.status(404).json({ status: 0, message: `Data not Found` });
+    const tableproject = await TableProjectsModel.find(query).lean();
 
+    if (!tableproject || tableproject.length === 0) {
+      return res.status(404).json({ status: 0, message: `Data not Found` });
+    }
+
+    // Encode avatar images
     for (let i = 0; i < tableproject.length; i++) {
-      // const contents = base64Encode(tableproject[i]["contenttext"],'contenttext');
-      // tableproject[i]["contenttext"] = await contents;
-      const contentsavatar = base64Encode(
-        tableproject[i]["lead_avatar"],
-        "profile_picture"
-      );
-      tableproject[i]["lead_avatar"] = await contentsavatar;
-      const contentsavatarupdatedby = base64Encode(
-        tableproject[i]["updated_by_avatar"],
-        "profile_picture"
-      );
-      tableproject[i]["updated_by_avatar"] = await contentsavatarupdatedby;
-      // tableproject[i]["contentpostingname"] = tableproject[i]["contentposting"];
-      // const contentposting = base64Encode(
-      //   tableproject[i]["contentposting"],
-      //   "contentposting"
-      // );
-      // tableproject[i]["contentposting"] = await contentposting;
+      const contentsavatar = base64Encode(tableproject[i]["lead_avatar"], "profile_picture");
+      tableproject[i]["lead_avatar"] = contentsavatar;
+
+      const contentsavatarupdatedby = base64Encode(tableproject[i]["updated_by_avatar"], "profile_picture");
+      tableproject[i]["updated_by_avatar"] = contentsavatarupdatedby;
     }
 
     console.log('Emitting tableProjectData:', tableproject);
 
-    // Emit event to all clients
+    // Emit event to all connected clients
     req.io.emit('tableProjectData', tableproject);
 
-
-    return res
-      .status(200)
-      .json({ status: 1, message: `Get All Table Projects`, tableproject });
+    return res.status(200).json({ status: 1, message: `Get All Table Projects`, tableproject });
   } catch (error) {
     return res.status(400).json({
       status: 0,
@@ -720,17 +687,23 @@ export const deleteProject = async (req, res) => {
     const query = { _id: req.params.id };
     let result = await ProjectsModel.deleteOne(query);
 
-    if (!result)
+    if (!result) {
       return res.status(404).json({ status: 0, message: `Data not Found` });
+    }
+
+    // Emit a Socket.IO event to notify clients that a project was deleted
+    req.io.emit('projectDeleted', { projectId: req.params.id });
 
     return res.status(200).json({
       status: 1,
       message: `Project with id ` + req.params.id + ` is deleted`,
     });
   } catch (error) {
-    return res
-      .status(400)
-      .json({ status: -1, message: `Error on delete Project` });
+    return res.status(400).json({
+      status: -1,
+      message: `Error on delete Project`,
+      error,
+    });
   }
 };
 export const deleteSubItem = async (req, res) => {
@@ -801,28 +774,38 @@ export const editGroupProject = async (req, res) => {
       .status(200);
 };
 export const editProject = async (req, res) => {
-  let newDocument = req.body;
-  const query = { _id: newDocument._id }; //pake ini kalo idnya pake uuid
+  try {
+    const newDocument = req.body;
+    const query = { _id: newDocument._id }; // using the ID to find the document
 
-  const updates = {
-    $set: newDocument,
-  };
-  let result = await ProjectsModel.findByIdAndUpdate(query, updates);
-  if (!result)
-    res
-      .send({
+    const updates = {
+      $set: newDocument,
+    };
+
+    const result = await ProjectsModel.findByIdAndUpdate(query, updates, { new: true });
+
+    if (!result) {
+      res.status(404).send({
         status: 0,
-        message: `data not found`,
-      })
-      .status(404);
-  else
-    res
-      .send({
+        message: `Data not found`,
+      });
+    } else {
+      // Emit the updated project to all connected clients
+      req.io.emit('projectEdited', result);
+
+      res.status(200).send({
         status: 1,
-        message: `Project with id ${req.params.id} successfully updated`,
+        message: `Project with id ${newDocument._id} successfully updated`,
         result,
-      })
-      .status(200);
+      });
+    }
+  } catch (error) {
+    res.status(400).send({
+      status: -1,
+      message: `Error on updating Project`,
+      error,
+    });
+  }
 };
 export const editSubItem = async (req, res) => {
   let newDocument = req.body;

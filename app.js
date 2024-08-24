@@ -17,19 +17,12 @@ const server = http.createServer(app);
 // Initialize Socket.IO with the server
 const io = new Server(server, {
   cors: {
-    // origin: "*", // Allow all origins, adjust this to your needs
-    origin: 'https://wms.dots.co.id',
+    origin: "*", // Allow all origins, adjust this to your needs
+    // origin: 'https://wms.dots.co.id',
     methods: ["GET", "POST"]
   }
 });
 
-io.on('connection', (socket) => {
-  console.log('A user connected');
-
-  socket.on('disconnect', () => {
-    console.log('A user disconnected');
-  });
-});
 
 const PORT = 3001; //menjalankan di port 3001
 
@@ -47,8 +40,8 @@ app.use(express.urlencoded({ extended: true })); //extended true akan menghilang
 mongoose.connect(process.env.mongodb_connection);
 
 const corsOptions = {
-  origin: 'https://wms.dots.co.id',
-  // origin: 'http://localhost:3000',
+  // origin: 'https://wms.dots.co.id',
+  origin: 'http://localhost:3000',
   credentials: true,
 };
 
