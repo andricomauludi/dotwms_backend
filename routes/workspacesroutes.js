@@ -33,26 +33,18 @@ const router = express.Router();
 // membuat konfigurasi diskStorage multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // if (file.fieldname === "contenttext") {
-    //   cb(null, "./assets/contenttext/");
-    // } else
+  
     if (file.fieldname === "contentposting") {
       cb(null, "./assets/contentposting/");
     }
-    // else if (file.fieldname === "postingcaption") {
-    //   cb(null, "./assets/postingcaption/");
-    // }
+ 
   },
   filename: (req, file, cb) => {
-    // if (file.fieldname === "contenttext") {
-    //   cb(null, Date.now() + "-" + file.originalname);
-    // } else
+   
     if (file.fieldname === "contentposting") {
       cb(null, Date.now() + "-" + file.originalname);
     }
-    // else if (file.fieldname === "postingcaption") {
-    //   cb(null, Date.now() + "-" + file.originalname);
-    // }
+   
   },
 });
 
@@ -97,9 +89,7 @@ function checkFileType(file, cb) {
 }
 //at the save function
 const multipleUpload = uploads.fields([
-  // { name: "contenttext", maxCount: 1 },
   { name: "contentposting" },
-  // { name: "postingcaption", maxCount: 1 },
 ]);
 
 //RESTful API ini menggunakan x-www-form-urlencoded

@@ -241,7 +241,8 @@ export const createTableProject = async (req, res) => {
   newDocument._id = projectid;
   newDocument.created_at = new Date();
   
-  const contentposting = req.files["contentposting"];
+  const contentposting = req.files["contentposting"];  
+
   
   if (contentposting) {
     if (contentposting.length > 1) {
@@ -267,6 +268,10 @@ export const createTableProject = async (req, res) => {
   }
 
   const result = await TableProjectsModel.create(newDocument);
+  // Base64 encode the avatars before saving and emitting the event
+  newDocument.lead_avatar = base64Encode(newDocument.lead_avatar, "profile_picture");
+  newDocument.updated_by_avatar = base64Encode(newDocument.updated_by_avatar, "profile_picture");
+
 
   if (!result) {
     return res.status(404).send({
@@ -364,7 +369,7 @@ export const getAllSubItemByTable = async (req, res) => {
       subItem[i]["avatar"] = await contentsavatar;
     }
 
-    console.log('Emitting subItemData:', subItem);
+    
     // Emit event to all clients
     req.io.emit('subItemData', subItem);
 
@@ -481,10 +486,7 @@ export const getProjectByGroupProject = async (req, res) => {
 
     if (!groupproject) {
       return res.status(404).json({ status: 0, message: `Data not Found` });
-    }
-
-    // Log the data that will be emitted
-    console.log('Emitting groupProjectData:', groupproject);
+    }        
 
     // Emit event to all clients
     req.io.emit('groupProjectData', groupproject);
@@ -504,23 +506,20 @@ export const getProjectByGroupProject = async (req, res) => {
 };
 export const getAllTableByProject = async (req, res) => {
   try {
-    let query = { project_id: req.params.id };
+    const query = { project_id: req.params.id };
     const tableproject = await TableProjectsModel.find(query).lean();
 
-    if (!tableproject || tableproject.length === 0) {
+    if (!tableproject) {
       return res.status(404).json({ status: 0, message: `Data not Found` });
     }
 
-    // Encode avatar images
-    for (let i = 0; i < tableproject.length; i++) {
-      const contentsavatar = base64Encode(tableproject[i]["lead_avatar"], "profile_picture");
-      tableproject[i]["lead_avatar"] = contentsavatar;
+    // Encode avatar images asynchronously
+    const encodeAvatar = async (avatarPath) => base64Encode(avatarPath, "profile_picture");
 
-      const contentsavatarupdatedby = base64Encode(tableproject[i]["updated_by_avatar"], "profile_picture");
-      tableproject[i]["updated_by_avatar"] = contentsavatarupdatedby;
-    }
-
-    console.log('Emitting tableProjectData:', tableproject);
+    await Promise.all(tableproject.map(async (project, index) => {
+      tableproject[index]["lead_avatar"] = await encodeAvatar(project["lead_avatar"]);
+      tableproject[index]["updated_by_avatar"] = await encodeAvatar(project["updated_by_avatar"]);
+    }));
 
     // Emit event to all connected clients
     req.io.emit('tableProjectData', tableproject);
@@ -530,10 +529,11 @@ export const getAllTableByProject = async (req, res) => {
     return res.status(400).json({
       status: 0,
       message: `Error on getting all table projects`,
-      error,
+      error: error.message,
     });
   }
 };
+
 export const detailTableProject = async (req, res) => {
   let query = { _id: req.params.id };
   try {
