@@ -54,8 +54,8 @@ export const createProject = async (req, res) => {
         result,
       })
       .status(404);
-  else{
-    req.io.emit('newProject', result);
+  else {
+    req.io.emit("newProject", result);
 
     res
       .send({
@@ -64,7 +64,6 @@ export const createProject = async (req, res) => {
         result,
       })
       .status(201);
-           
   }
 };
 
@@ -168,13 +167,11 @@ async function createUpdateContentPosting(
 export const deleteContentPosting = async (req, res) => {
   const ids = req.body.id;
 
-  const contentposting = await ContentPostingsModel.find(
-    {
-      _id: {
-        $in: ids,
-      },
-    },    
-  ).select({ "file_name": 1, "_id": 0});
+  const contentposting = await ContentPostingsModel.find({
+    _id: {
+      $in: ids,
+    },
+  }).select({ file_name: 1, _id: 0 });
 
   for (let i = 0; i < contentposting.length; i++) {
     const path = "./assets/contentposting/" + contentposting[i].file_name;
@@ -240,10 +237,9 @@ export const createTableProject = async (req, res) => {
   const projectid = uuidv4();
   newDocument._id = projectid;
   newDocument.created_at = new Date();
-  
-  const contentposting = req.files["contentposting"];  
 
-  
+  const contentposting = req.files["contentposting"];
+
   if (contentposting) {
     if (contentposting.length > 1) {
       for (let i = 0; i < contentposting.length; i++) {
@@ -252,13 +248,13 @@ export const createTableProject = async (req, res) => {
     } else {
       newDocument.contentposting = contentposting[0].filename;
     }
-    
+
     const resultContentPosting = await createUpdateContentPosting(
       newDocument,
       projectid,
       contentposting
     );
-    
+
     if (resultContentPosting === 0) {
       return res.status(404).send({
         status: 0,
@@ -269,9 +265,6 @@ export const createTableProject = async (req, res) => {
 
   const result = await TableProjectsModel.create(newDocument);
   // Base64 encode the avatars before saving and emitting the event
-  newDocument.lead_avatar = base64Encode(newDocument.lead_avatar, "profile_picture");
-  newDocument.updated_by_avatar = base64Encode(newDocument.updated_by_avatar, "profile_picture");
-
 
   if (!result) {
     return res.status(404).send({
@@ -279,9 +272,17 @@ export const createTableProject = async (req, res) => {
       message: `Cannot create data in the database`,
     });
   }
+  newDocument.lead_avatar = base64Encode(
+    newDocument.lead_avatar,
+    "profile_picture"
+  );
+  newDocument.updated_by_avatar = base64Encode(
+    newDocument.updated_by_avatar,
+    "profile_picture"
+  );
 
   // Emit event to all connected clients
-  req.io.emit('newTableProject', newDocument);
+  req.io.emit("newTableProject", newDocument);
 
   return res.status(201).send({
     status: 1,
@@ -307,7 +308,12 @@ export const createSubItem = async (req, res) => {
         result,
       })
       .status(404);
-  else
+  else {
+    result.avatar = base64Encode(result.avatar, "profile_picture");
+
+    req.io.emit("newSubItem", result);
+    console.log(result);
+
     res
       .send({
         status: 1,
@@ -315,6 +321,7 @@ export const createSubItem = async (req, res) => {
         result,
       })
       .status(201);
+  }
 };
 
 export const getAllGroupProject = async (req, res) => {
@@ -369,10 +376,8 @@ export const getAllSubItemByTable = async (req, res) => {
       subItem[i]["avatar"] = await contentsavatar;
     }
 
-    
     // Emit event to all clients
-    req.io.emit('subItemData', subItem);
-
+    req.io.emit("subItemData", subItem);
 
     return res
       .status(200)
@@ -486,10 +491,10 @@ export const getProjectByGroupProject = async (req, res) => {
 
     if (!groupproject) {
       return res.status(404).json({ status: 0, message: `Data not Found` });
-    }        
+    }
 
     // Emit event to all clients
-    req.io.emit('groupProjectData', groupproject);
+    req.io.emit("groupProjectData", groupproject);
 
     res.status(200).json({
       status: 1,
@@ -514,17 +519,26 @@ export const getAllTableByProject = async (req, res) => {
     }
 
     // Encode avatar images asynchronously
-    const encodeAvatar = async (avatarPath) => base64Encode(avatarPath, "profile_picture");
+    const encodeAvatar = async (avatarPath) =>
+      base64Encode(avatarPath, "profile_picture");
 
-    await Promise.all(tableproject.map(async (project, index) => {
-      tableproject[index]["lead_avatar"] = await encodeAvatar(project["lead_avatar"]);
-      tableproject[index]["updated_by_avatar"] = await encodeAvatar(project["updated_by_avatar"]);
-    }));
+    await Promise.all(
+      tableproject.map(async (project, index) => {
+        tableproject[index]["lead_avatar"] = await encodeAvatar(
+          project["lead_avatar"]
+        );
+        tableproject[index]["updated_by_avatar"] = await encodeAvatar(
+          project["updated_by_avatar"]
+        );
+      })
+    );
 
     // Emit event to all connected clients
-    req.io.emit('tableProjectData', tableproject);
+    req.io.emit("tableProjectData", tableproject);
 
-    return res.status(200).json({ status: 1, message: `Get All Table Projects`, tableproject });
+    return res
+      .status(200)
+      .json({ status: 1, message: `Get All Table Projects`, tableproject });
   } catch (error) {
     return res.status(400).json({
       status: 0,
@@ -654,6 +668,8 @@ export const deleteTableProject = async (req, res) => {
     if (!result)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
+    req.io.emit("tableProjectDeleted", { projectId: req.params.id });
+
     return res.status(200).json({
       status: 1,
       message: `Table Project with id ` + req.params.id + ` is deleted`,
@@ -692,7 +708,7 @@ export const deleteProject = async (req, res) => {
     }
 
     // Emit a Socket.IO event to notify clients that a project was deleted
-    req.io.emit('projectDeleted', { projectId: req.params.id });
+    req.io.emit("projectDeleted", { projectId: req.params.id });
 
     return res.status(200).json({
       status: 1,
@@ -714,6 +730,7 @@ export const deleteSubItem = async (req, res) => {
     if (!result)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
+    req.io.emit("subItemDeleted", { projectId: req.params.id });
     return res.status(200).json({
       status: 1,
       message: `Sub Item with id ` + req.params.id + ` is deleted`,
@@ -782,7 +799,9 @@ export const editProject = async (req, res) => {
       $set: newDocument,
     };
 
-    const result = await ProjectsModel.findByIdAndUpdate(query, updates, { new: true });
+    const result = await ProjectsModel.findByIdAndUpdate(query, updates, {
+      new: true,
+    });
 
     if (!result) {
       res.status(404).send({
@@ -791,7 +810,7 @@ export const editProject = async (req, res) => {
       });
     } else {
       // Emit the updated project to all connected clients
-      req.io.emit('projectEdited', result);
+      req.io.emit("projectEdited", result);
 
       res.status(200).send({
         status: 1,
@@ -814,7 +833,7 @@ export const editSubItem = async (req, res) => {
   const updates = {
     $set: newDocument,
   };
-  let result = await SubItemModel.findByIdAndUpdate(query, updates);
+  let result = await SubItemModel.findByIdAndUpdate(query, updates, { new: true });
   if (!result)
     res
       .send({
@@ -822,7 +841,9 @@ export const editSubItem = async (req, res) => {
         message: `data not found`,
       })
       .status(404);
-  else
+  else{
+    result.avatar = base64Encode(result.avatar, "profile_picture");
+    req.io.emit("subItemEdited", result);    
     res
       .send({
         status: 1,
@@ -830,6 +851,8 @@ export const editSubItem = async (req, res) => {
         result,
       })
       .status(200);
+    
+  }
 };
 export const editTableProject = async (req, res) => {
   let newDocument = req.body;
@@ -865,7 +888,9 @@ export const editTableProject = async (req, res) => {
   const updates = {
     $set: newDocument,
   };
-  let result = await TableProjectsModel.findByIdAndUpdate(query, updates);
+  let result = await TableProjectsModel.findByIdAndUpdate(query, updates, {
+    new: true,
+  });
   if (!result)
     res
       .send({
@@ -873,7 +898,13 @@ export const editTableProject = async (req, res) => {
         message: `data not found`,
       })
       .status(404);
-  else
+  else {
+    result.lead_avatar = base64Encode(result.lead_avatar, "profile_picture");
+    result.updated_by_avatar = base64Encode(
+      result.updated_by_avatar,
+      "profile_picture"
+    );
+    req.io.emit("tableProjectEdited", result);
     res
       .send({
         status: 1,
@@ -881,4 +912,5 @@ export const editTableProject = async (req, res) => {
         result,
       })
       .status(200);
+  }
 };

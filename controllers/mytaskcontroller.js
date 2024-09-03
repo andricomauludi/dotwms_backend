@@ -93,6 +93,8 @@ export const myTask = async (req, res) => {
       subItem[i]["group_project_name"] = await groupproject[0]["group_project"];
     }
 
+    req.io.emit('taskUpdated', subItem); // Emit an event when tasks are fetched
+
     return res.status(200).json({ status: 1, message: `Get My Task`, subItem });
   } catch (error) {    
     return res.status(400).json({
@@ -153,11 +155,13 @@ export const myTaskDone = async (req, res) => {
       subItem[i]["group_project_name"] = await groupproject[0]["group_project"];
     }
 
+    req.io.emit('taskDoneUpdated', subItem); // Emit an event when done tasks are fetched
+
     return res.status(200).json({ status: 1, message: `Get My Task`, subItem });
   } catch (error) {    
     return res.status(400).json({
       status: 0,
-      message: `Error on getting my task`,
+      message: `Error on getting my task done`,
       error,
     });
   }
