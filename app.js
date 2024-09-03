@@ -17,10 +17,11 @@ const server = http.createServer(app);
 // Initialize Socket.IO with the server
 const io = new Server(server, {
   cors: {
-    // origin: "*", // Allow all origins, adjust this to your needs
-    origin: 'https://wms.dots.co.id',
-    methods: ["GET", "POST"]
-  }
+    origin: 'https://wms.dots.co.id', // Specify the allowed origin
+    methods: ["GET", "POST", "PATCH"] // Specify allowed methods
+  },
+  pingTimeout: 60000, // Set the ping timeout to 60000ms (60 seconds)
+  pingInterval: 25000 // Set the ping interval to 25000ms (25 seconds)
 });
 
 
