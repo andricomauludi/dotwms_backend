@@ -17,8 +17,8 @@ const server = http.createServer(app);
 // Initialize Socket.IO with the server
 const io = new Server(server, {
   cors: {
-    origin: "*", // Allow all origins, adjust this to your needs
-    // origin: 'https://wms.dots.co.id',
+    // origin: "*", // Allow all origins, adjust this to your needs
+    origin: 'https://wms.dots.co.id',
     methods: ["GET", "POST"]
   }
 });
