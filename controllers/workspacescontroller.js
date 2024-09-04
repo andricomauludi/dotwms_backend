@@ -309,6 +309,7 @@ export const createSubItem = async (req, res) => {
 
     // Emit only to the clients listening for this specific `table_project_id`
     req.io.emit(`newSubItem_${result.table_project_id}`, result);
+    console.log(result)
 
     res.status(201).send({
       status: 1,
@@ -424,7 +425,7 @@ export const showContentPosting = async (req, res) => {
       body.file_type == "image/jpeg" ||
       body.file_type == "image/jpg"
     ) {
-      const contentfile = base64Encode(body.file_name, "contentposting");
+      const contentfile = base64EncodeContentPosting(body.file_name, "contentposting");
 
       return res
         .status(200)
@@ -589,6 +590,20 @@ function base64Encode(inputFileName, content) {
   //   );
   //   return contents;
   // }
+  const contents = "";
+
+  return contents;
+}
+function base64EncodeContentPosting(inputFileName, content) {
+  if (!inputFileName == "") {
+    const contents = fs.readFileSync(
+      `./assets/` + content + `/` + inputFileName,
+      {
+        encoding: "base64",
+      }
+    );
+    return contents;
+  }
   const contents = "";
 
   return contents;
