@@ -291,38 +291,33 @@ export const createTableProject = async (req, res) => {
   });
 };
 export const createSubItem = async (req, res) => {
-  // Create a new blog post object
   let newDocument = req.body;
-  const projectid = uuidv4(); //generate user id
+  const projectid = uuidv4(); // Generate a unique ID for the sub-item
   newDocument._id = projectid;
   newDocument.created_at = new Date();
-  // foto = req.file
 
   const result = await SubItemModel.create(newDocument);
 
-  if (!result)
-    res
-      .send({
-        status: 0,
-        message: `Cannot create data in database`,
-        result,
-      })
-      .status(404);
-  else {
+  if (!result) {
+    res.status(404).send({
+      status: 0,
+      message: `Cannot create data in database`,
+      result,
+    });
+  } else {
     result.avatar = base64Encode(result.avatar, "profile_picture");
 
-    req.io.emit("newSubItem", result);
-    console.log(result);
+    // Emit only to the clients listening for this specific `table_project_id`
+    req.io.emit(`newSubItem_${result.table_project_id}`, result);
 
-    res
-      .send({
-        status: 1,
-        message: "Sub Item created",
-        result,
-      })
-      .status(201);
+    res.status(201).send({
+      status: 1,
+      message: "Sub Item created",
+      result,
+    });
   }
 };
+
 
 export const getAllGroupProject = async (req, res) => {
   try {
@@ -361,12 +356,11 @@ export const getAllProject = async (req, res) => {
 export const getAllSubItemByTable = async (req, res) => {
   try {
     let query = { table_project_id: req.params.id };
-    const subItem = await SubItemModel.find(query)
-      .select
-      // "-_id"
-      ();
-    if (!subItem)
+    const subItem = await SubItemModel.find(query);
+
+    if (!subItem) {
       return res.status(404).json({ status: 0, message: `Data not Found` });
+    }
 
     for (let i = 0; i < subItem.length; i++) {
       const contentsavatar = base64Encode(
@@ -376,8 +370,8 @@ export const getAllSubItemByTable = async (req, res) => {
       subItem[i]["avatar"] = await contentsavatar;
     }
 
-    // Emit event to all clients
-    req.io.emit("subItemData", subItem);
+    // Emit only to the clients listening for this specific `table_project_id`
+    req.io.emit(`subItemData_${req.params.id}`, subItem);
 
     return res
       .status(200)

@@ -18,6 +18,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: 'https://wms.dots.co.id', // Specify the allowed origin
+    // origin: '*', // Specify the allowed origin
     methods: ["GET", "POST", "PATCH"] // Specify allowed methods
   },
   pingTimeout: 60000, // Set the ping timeout to 60000ms (60 seconds)
