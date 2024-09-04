@@ -519,19 +519,19 @@ export const getAllTableByProject = async (req, res) => {
     }
 
     // Encode avatar images asynchronously
-    // const encodeAvatar = async (avatarPath) =>
-    //   base64Encode(avatarPath, "profile_picture");
+    const encodeAvatar = async (avatarPath) =>
+      base64Encode(avatarPath, "profile_picture");
 
-    // await Promise.all(
-    //   tableproject.map(async (project, index) => {
-    //     tableproject[index]["lead_avatar"] = await encodeAvatar(
-    //       project["lead_avatar"]
-    //     );
-    //     tableproject[index]["updated_by_avatar"] = await encodeAvatar(
-    //       project["updated_by_avatar"]
-    //     );
-    //   })
-    // );
+    await Promise.all(
+      tableproject.map(async (project, index) => {
+        tableproject[index]["lead_avatar"] = await encodeAvatar(
+          project["lead_avatar"]
+        );
+        tableproject[index]["updated_by_avatar"] = await encodeAvatar(
+          project["updated_by_avatar"]
+        );
+      })
+    );
 
     // Emit event to all connected clients
     req.io.emit("tableProjectData", tableproject);
@@ -586,15 +586,15 @@ export const detailTableProject = async (req, res) => {
 };
 
 function base64Encode(inputFileName, content) {
-  if (!inputFileName == "") {
-    const contents = fs.readFileSync(
-      `./assets/` + content + `/` + inputFileName,
-      {
-        encoding: "base64",
-      }
-    );
-    return contents;
-  }
+  // if (!inputFileName == "") {
+  //   const contents = fs.readFileSync(
+  //     `./assets/` + content + `/` + inputFileName,
+  //     {
+  //       encoding: "base64",
+  //     }
+  //   );
+  //   return contents;
+  // }
   const contents = "";
 
   return contents;
