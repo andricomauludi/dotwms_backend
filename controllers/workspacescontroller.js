@@ -519,8 +519,8 @@ export const getAllTableByProject = async (req, res) => {
     }
 
     // Encode avatar images asynchronously
-    const encodeAvatar = async (avatarPath) =>
-      base64Encode(avatarPath, "profile_picture");
+    // const encodeAvatar = async (avatarPath) =>
+    //   base64Encode(avatarPath, "profile_picture");
 
     // await Promise.all(
     //   tableproject.map(async (project, index) => {
