@@ -522,16 +522,16 @@ export const getAllTableByProject = async (req, res) => {
     const encodeAvatar = async (avatarPath) =>
       base64Encode(avatarPath, "profile_picture");
 
-    await Promise.all(
-      tableproject.map(async (project, index) => {
-        tableproject[index]["lead_avatar"] = await encodeAvatar(
-          project["lead_avatar"]
-        );
-        tableproject[index]["updated_by_avatar"] = await encodeAvatar(
-          project["updated_by_avatar"]
-        );
-      })
-    );
+    // await Promise.all(
+    //   tableproject.map(async (project, index) => {
+    //     tableproject[index]["lead_avatar"] = await encodeAvatar(
+    //       project["lead_avatar"]
+    //     );
+    //     tableproject[index]["updated_by_avatar"] = await encodeAvatar(
+    //       project["updated_by_avatar"]
+    //     );
+    //   })
+    // );
 
     // Emit event to all connected clients
     req.io.emit("tableProjectData", tableproject);
