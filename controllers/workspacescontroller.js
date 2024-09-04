@@ -512,33 +512,28 @@ export const getProjectByGroupProject = async (req, res) => {
 export const getAllTableByProject = async (req, res) => {
   try {
     const query = { project_id: req.params.id };
-    const tableproject = await TableProjectsModel.find(query).lean();
+    const tableproject = await TableProjectsModel.find(query, 'lead_avatar updated_by_avatar other_required_fields').lean();
 
-    if (!tableproject) {
+    if (!tableproject.length) {
       return res.status(404).json({ status: 0, message: `Data not Found` });
     }
 
-    // Encode avatar images asynchronously
-    const encodeAvatar = async (avatarPath) =>
-      base64Encode(avatarPath, "profile_picture");
+    const encodeAvatar = async (avatarPath) => base64Encode(avatarPath, "profile_picture");
 
     await Promise.all(
       tableproject.map(async (project, index) => {
-        tableproject[index]["lead_avatar"] = await encodeAvatar(
-          project["lead_avatar"]
-        );
-        tableproject[index]["updated_by_avatar"] = await encodeAvatar(
-          project["updated_by_avatar"]
-        );
+        if (project.lead_avatar) {
+          tableproject[index]["lead_avatar"] = await encodeAvatar(project.lead_avatar);
+        }
+        if (project.updated_by_avatar) {
+          tableproject[index]["updated_by_avatar"] = await encodeAvatar(project.updated_by_avatar);
+        }
       })
     );
 
-    // Emit event to all connected clients
     req.io.emit("tableProjectData", tableproject);
 
-    return res
-      .status(200)
-      .json({ status: 1, message: `Get All Table Projects`, tableproject });
+    return res.status(200).json({ status: 1, message: `Get All Table Projects`, tableproject });
   } catch (error) {
     return res.status(400).json({
       status: 0,
@@ -547,6 +542,7 @@ export const getAllTableByProject = async (req, res) => {
     });
   }
 };
+
 
 export const detailTableProject = async (req, res) => {
   let query = { _id: req.params.id };
