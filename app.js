@@ -17,8 +17,8 @@ const server = http.createServer(app);
 // Initialize Socket.IO with the server
 const io = new Server(server, {
   cors: {
-    origin: 'https://wms.dots.co.id', // Specify the allowed origin
-    // origin: '*', // Specify the allowed origin
+    // origin: 'https://wms.dots.co.id', // Specify the allowed origin
+    origin: '*', // Specify the allowed origin
     methods: ["GET", "POST", "PATCH"] // Specify allowed methods
   },
   pingTimeout: 60000, // Set the ping timeout to 60000ms (60 seconds)
@@ -42,8 +42,8 @@ app.use(express.urlencoded({ extended: true })); //extended true akan menghilang
 mongoose.connect(process.env.mongodb_connection);
 
 const corsOptions = {
-  origin: 'https://wms.dots.co.id',
-  // origin: 'http://localhost:3000',
+  // origin: 'https://wms.dots.co.id',
+  origin: 'http://localhost:3000',
   credentials: true,
 };
 
