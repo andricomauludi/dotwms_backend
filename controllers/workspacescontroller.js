@@ -12,6 +12,170 @@ const app = express();
 
 uuidv4();
 
+const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
+const REDIRECT_URI = process.env.REDIRECT_URI;
+const REFRESH_TOKEN =
+  process.env.REFRESH_TOKEN;
+const FOLDER_ID = process.env.FOLDER_ID; // ID dari folder di Google Drive tempat file akan diupload
+
+const oauth2Client = new google.auth.OAuth2(
+  CLIENT_ID,
+  CLIENT_SECRET,
+  REDIRECT_URI
+);
+
+oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
+
+const drive = google.drive({
+  version: "v3",
+  auth: oauth2Client,
+});
+
+// Function to refresh the access token
+const refreshAccessToken = async () => {
+  try {
+    const response = await axios.post(
+      "https://oauth2.googleapis.com/token",
+      null,
+      {
+        params: {
+          client_id: CLIENT_ID,
+          client_secret: CLIENT_SECRET,
+          refresh_token: REFRESH_TOKEN,
+          grant_type: "refresh_token",
+        },
+      }
+    );
+    const newAccessToken = response.data.access_token;
+    oauth2Client.setCredentials({ access_token: newAccessToken });
+    console.log("Access token refreshed successfully.");
+    return newAccessToken;
+  } catch (error) {
+    console.error("Failed to refresh access token:", error);
+    throw error;
+  }
+};
+
+const getFileFromGoogleDrive = async (fileId) => {
+  try {
+    await refreshAccessToken(); // Ensure the token is fresh before making the request
+    const response = await drive.files.get(
+      {
+        fileId: fileId,
+        alt: "media", // Mendapatkan konten file
+      },
+      { responseType: "stream" }
+    );
+
+    return response.data; // Kembalikan stream data file
+  } catch (error) {
+    console.error("Error retrieving file from Google Drive:", error);
+    throw error;
+  }
+};
+// Fungsi upload file ke Google Drive menggunakan async/await
+const uploadFile = async (filename, file, folderId) => {
+  const bufferStream = new Readable();
+  bufferStream.push(file.buffer);
+  bufferStream.push(null); // Menandakan akhir stream
+  try {
+    await refreshAccessToken(); // Ensure the token is fresh before making the request
+    const fileMetadata = {
+      name: filename,
+      parents: [folderId], // Tentukan folder tujuan
+    };
+
+    const media = {
+      mimeType: file.mimeType,
+      body: bufferStream,
+    };
+
+    const response = await drive.files.create({
+      resource: fileMetadata,
+      media: media,
+      fields: "id",
+    });
+
+    return response.data.id;
+  } catch (error) {
+    console.error("Error uploading to Google Drive:", error.message);
+    return null;
+  }
+};
+
+// Endpoint Express.js untuk upload file
+export const uploadHandler = async (req, res) => {
+  let newDocument = req.body;
+
+  const files = req.files["contentposting"];
+  if (!files) {
+    return res.status(400).send("No file uploaded.");
+  }
+
+  const file = files;
+  const filePath = `./assets/contentposting/${file[0].filename}`;
+  // await file.mv(filePath);
+
+  const result = await uploadFile(filePath, file.mimetype, FOLDER_ID);
+
+  if (result) {
+    res.status(200).send({ success: true, fileId: result.id });
+  } else {
+    res.status(500).send("Failed to upload file.");
+  }
+};
+export const readHandler = async (req, res) => {
+  const fileId = "1W4RmTYDPphALod4zAiI4SugOGmGG77Po"; // Ganti dengan ID file yang ingin diambil
+  try {
+    const fileStream = await getFileFromGoogleDrive(fileId);
+    fileStream.pipe(res); // Stream the file directly to the response
+  } catch (error) {
+    res.status(500).send("Error retrieving file");
+  }
+};
+export const uploadHandler2 = async (req, res) => {
+  let newDocument = req.body;
+
+  const file = req.files["contentposting"];
+  if (!file) {
+    return res.status(400).send("No file uploaded.");
+  }
+
+  const files = file;
+  try {
+    const uploadPromises = files.map(async (file) => {
+      // Upload file ke Google Drive
+      const filename = Date.now() + "-" + file.originalname;
+      return await uploadFile(filename, file, FOLDER_ID);
+    });
+
+    // Tunggu semua file selesai diupload
+    const uploadedFiles = await Promise.all(uploadPromises);
+    console.log("Uploaded files:", await uploadedFiles); // Log seluruh hasil
+
+    // Ambil ID file yang berhasil diupload
+    const fileIds = uploadedFiles.filter((id) => id !== null); // Filter out null IDs
+
+    console.log("File IDs:", fileIds); // Log file IDs yang terfilter
+
+    // Simpan ID file ke database atau lakukan apa pun yang diperlukan
+    // Misalnya, bisa menyimpan fileIds ke dalam newDocument
+    newDocument.fileIds = fileIds; // Menyimpan array ID ke dalam newDocument
+
+    // Simpan newDocument ke database (misalnya menggunakan Mongoose)
+    // await DocumentModel.create(newDocument); // Ganti dengan model dan method yang sesuai
+
+    res.send({
+      message: "Files uploaded to Google Drive successfully.",
+      fileIds,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Failed to upload files to Google Drive.");
+  }
+};
+
 export const createGroupProject = async (req, res) => {
   // Create a new blog post object
   let newDocument = req.body;
@@ -130,6 +294,71 @@ async function createUpdateContentPosting(
   });
 
   const result = await ContentPostingsModel.insertMany(itemsUpload);
+  if (!result) {
+    const hasilgakbener = 0;
+    return hasilgakbener;
+  }
+  const hasilbener = 1;
+  return hasilbener;
+  // }
+  // else {
+  //   // MASUK UPDATE
+  //   console.log("masuk updatee");
+  //   let itemsUpload = contentposting.map((item) => {
+  //     return {
+  //       _id: uuidv4(),
+  //       table_project_id: projectid,
+  //       table_project_name: newDocument.item,
+  //       file_name: item.filename,
+  //       created_at: new Date(),
+  //       updated_at: new Date(),
+  //       created_by: newDocument.created_by,
+  //       updated_by: newDocument.updated_by,
+  //     };
+  //   });
+  //   const query = { table_project_id: newDocument._id };
+  //   await ContentPostingsModel.deleteMany(query);
+
+  //   const result = await ContentPostingsModel.insertMany(itemsUpload);
+  //   if (!result) {
+  //     const hasilgakbener = 0;
+  //     return hasilgakbener;
+  //   }
+  //   const hasilbener = 1;
+  //   return hasilbener;
+  // }
+}
+async function createUpdateContentPosting2(
+  newDocument,
+  projectid,
+  contentposting,
+  res
+) {
+  //MASUK CREATE
+
+  // if (!tableproject) {
+  let itemsUpload = contentposting.map(async (item) => {
+    const filename = Date.now() + "-" + item.originalname;
+    const id_file = await uploadFile(filename, item, FOLDER_ID);
+    return {
+      _id: uuidv4(),
+      project_id: newDocument.project_id,
+      project_name: newDocument.project_name,
+      table_project_id: projectid,
+      table_project_name: newDocument.item,
+      file_name: id_file,
+      file_name_real: filename,
+      file_type: item.mimetype,
+      created_at: new Date(),
+      updated_at: new Date(),
+      created_by: newDocument.created_by,
+      updated_by: newDocument.updated_by,
+    };
+  });
+
+  const uploadedFiles = await Promise.all(itemsUpload);
+
+  const result = await ContentPostingsModel.insertMany(await uploadedFiles);
   if (!result) {
     const hasilgakbener = 0;
     return hasilgakbener;
@@ -308,8 +537,7 @@ export const createSubItem = async (req, res) => {
     result.avatar = base64Encode(result.avatar, "profile_picture");
 
     // Emit only to the clients listening for this specific `table_project_id`
-    req.io.emit(`newSubItem_${result.table_project_id}`, result);
-    console.log(result)
+    req.io.emit(`newSubItem_${result.table_project_id}`, result);    
 
     res.status(201).send({
       status: 1,
@@ -443,6 +671,54 @@ export const showContentPosting = async (req, res) => {
     });
   }
 };
+export const showContentPosting2 = async (req, res) => {
+  const body = req.body; //body isinya file_name sama file_type
+  try {
+    const fileStream = await getFileFromGoogleDrive(body.file_name);
+    fileStream.pipe(res); // Stream the file directly to the response
+  } catch (error) {
+    res.status(500).send("Error retrieving file");
+  }
+};
+export const showContentPosting3 = async (req, res) => {
+  const body = req.body; // body contains file_name and file_type
+  try {
+    const { file_name } = body;
+
+    // Generate a Google Drive direct access URL
+    const fileUrl = `https://drive.google.com/file/d/${file_name}/view`;
+
+    // Return HTML with a link to open the file directly on Google Drive
+    return res
+      .status(200)
+      .json({ status: 1, message: `showing url file`, fileUrl });
+  } catch (error) {
+    res.status(500).send("Error retrieving file");
+  }
+};
+export const showContentPostingHtml = async (req, res) => {
+  const body = req.body; // body contains file_name and file_type
+  try {
+    const { file_name } = body;
+
+    // Generate a Google Drive direct access URL
+    const fileUrl = `https://drive.google.com/file/d/${file_name}/view`;
+
+    // Return HTML with a link to open the file directly on Google Drive
+    res.send(`
+      <html>
+        <body style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column;">
+          <a href="${fileUrl}" target="_blank" style="font-size: 18px; text-decoration: none; color: blue;">
+            Click here to view the file on Google Drive
+          </a>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    res.status(500).send("Error retrieving file");
+  }
+};
+
 export const getContentPostingByTable = async (req, res) => {
   try {
     let query = { table_project_id: req.params.id };

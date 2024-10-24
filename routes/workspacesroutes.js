@@ -24,6 +24,8 @@ import {
   getContentPostingByTable,
   getProjectByGroupProject,
   showContentPosting,
+  showContentPosting2,
+  showContentPosting3,
   streamVideo,
 } from "../controllers/workspacescontroller.js";
 import { myTask, myTaskDone } from "../controllers/mytaskcontroller.js";
@@ -149,7 +151,18 @@ router.get(
   verifyToken,
   getAllSubItemByTable
 );
-router.post("/show-content-posting", uploads.none(), verifyToken, showContentPosting);
+router.post(
+  "/show-content-posting",
+  uploads.none(),
+  verifyToken,
+  showContentPosting2
+);
+router.post(
+  "/show-content-posting-link",
+  uploads.none(),
+  verifyToken,
+  showContentPosting3
+);
 router.get(
   "/content-posting/:id",
   uploads.none(),

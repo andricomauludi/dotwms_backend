@@ -5,39 +5,44 @@ import jwt from "jsonwebtoken";
 
 uuidv4();
 
-
 export const changePassword = async (req, res) => {
-  const { email, password, confPassword } = req.body;
+  const { email, oldPassword, password, confPassword } = req.body;
+
   if (password !== confPassword)
     return res
-      .status(400)
+      .status(200)
       .json({ status: -1, message: `Password not matched` });
-  const salt = await bcrypt.genSalt(); //melakukan bcrypt
-  const hashPassword = await bcrypt.hash(password, salt); //password nya dilakukan hash
+
+  const user = await UsersModel.findOne({ email });
+  if (!user) {
+    return res.status(404).json({ status: 0, message: "User not found" });
+  }
+
+  const passwordMatch = await bcrypt.compare(oldPassword, user.password);
+  if (!passwordMatch) {
+    return res
+      .status(200)
+      .json({ status: -1, message: "Old password is incorrect" });
+  }
+
+  const isSamePassword = await bcrypt.compare(password, user.password);
+  if (isSamePassword) {
+    return res.status(200).json({
+      status: -1,
+      message: `New password cannot be the same as the old password`,
+    });
+  }
+
+  const salt = await bcrypt.genSalt();
+  const hashPassword = await bcrypt.hash(password, salt);
+
   try {
-    const query = { email: email };
-    const updates = {
-      $set: { password: hashPassword }, //harus pake set buat di update
-    };
-    let result = await UsersModel.findOneAndUpdate(query, updates);
-    if (!result)
-      res
-        .send({
-          status: 0,
-          message: `data not found`,
-          result,
-        })
-        .status(404);
-    else
-      res
-        .send({
-          status: 1,
-          message: `Password changed`,
-          result,
-        })
-        .status(200);
+    user.password = hashPassword;
+    await user.save();
+    res.status(200).json({ status: 1, message: "Password changed" });
   } catch (error) {
     console.log(error);
+    res.status(200).json({ message: "Server error" });
   }
 };
 
@@ -156,23 +161,26 @@ export const getAllUser = async (req, res) => {
     if (!user)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
-      // for (let i = 0; i < user.length; i++) {      
-        const content = base64Encode(user[0]['profile_picture'],'profile_picture');
-        user[0]['profile_picture'] = await content;    
-      // }
+    // for (let i = 0; i < user.length; i++) {
+    const content = base64Encode(user[0]["profile_picture"], "profile_picture");
+    user[0]["profile_picture"] = await content;
+    // }
 
     return res.status(200).json({ status: 1, message: `Get All Users`, user });
   } catch (error) {
     return res
       .status(400)
-      .json({ status: 0, message: `Error on getting all users`,error });
+      .json({ status: 0, message: `Error on getting all users`, error });
   }
 };
 
-function base64Encode(inputFileName,content) {  
-  const contents = fs.readFileSync(`./assets/`+content+`/` + inputFileName, {
-    encoding: "base64",
-  });
+function base64Encode(inputFileName, content) {
+  const contents = fs.readFileSync(
+    `./assets/` + content + `/` + inputFileName,
+    {
+      encoding: "base64",
+    }
+  );
 
   return contents;
 }
@@ -185,7 +193,9 @@ export const dropdownUser = async (req, res) => {
     if (!user)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
-    return res.status(200).json({ status: 1, message: `Get All Users for dropdown`, user });
+    return res
+      .status(200)
+      .json({ status: 1, message: `Get All Users for dropdown`, user });
   } catch (error) {
     return res
       .status(400)
@@ -211,8 +221,6 @@ export const detailUser = async (req, res) => {
   }
 };
 export const getMe = async (req, res) => {
-;
-
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1]; //mengambil authheader kalo ada ambil token nya, token di split karena nanti tulisannya : token eySAFas.....
   if (token == null) return res.sendStatus(401);
@@ -222,18 +230,16 @@ export const getMe = async (req, res) => {
     req.userId = decoded.userId;
   });
 
-  let query = { _id: req.userId }  
+  let query = { _id: req.userId };
 
   try {
-    const user= await UsersModel.findOne(query).select(
+    const user = await UsersModel.findOne(query).select(
       "-password -is_admin -refresh_Token"
     );
     if (!user)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
-    return res
-      .status(200)
-      .json({ status: 1, message: `Get Me success`, user });
+    return res.status(200).json({ status: 1, message: `Get Me success`, user });
   } catch (error) {
     return res
       .status(400)
