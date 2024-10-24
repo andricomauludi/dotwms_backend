@@ -7,6 +7,9 @@ import express from "express";
 import fs from "fs";
 import SubItemModel from "../models/subitemmodel.js";
 import GroupProjectModel from "../models/groupprojectmodel.js";
+import { google } from 'googleapis'; // Jika Anda menggunakan ES Modules
+import axios from "axios";
+
 
 const app = express();
 
@@ -19,6 +22,8 @@ const REFRESH_TOKEN =
   process.env.REFRESH_TOKEN;
 const FOLDER_ID = process.env.FOLDER_ID; // ID dari folder di Google Drive tempat file akan diupload
 
+
+console.log(CLIENT_ID)
 const oauth2Client = new google.auth.OAuth2(
   CLIENT_ID,
   CLIENT_SECRET,

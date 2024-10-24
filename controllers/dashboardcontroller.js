@@ -16,10 +16,21 @@ export const getContentsCard = async (req, res) => {
   try {
     // const project = await ProjectsModel.find().select("-_id");
     const groupproject = await GroupProjectModel.findOne()
-      .sort({ created_at: -1 })
-      .select("_id");
-
+    .sort({ created_at: -1 })
+    .select("_id");
+    
     const user = await UsersModel.find().count();
+    if (!groupproject) {
+      return res.status(200).json({ 
+        status: 1, 
+        message: `Get All contents for dashboard`, 
+        groupproject, 
+        project: { count: 0 }, 
+        tableproject: { count: 0 }, 
+        subitem: { count: 0 }, 
+        user: user
+      });
+    }
 
     if (!groupproject) {
       return res.status(200).json({

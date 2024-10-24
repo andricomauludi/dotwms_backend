@@ -22,8 +22,7 @@ export const createUser = async (req, res) => {
   //   res.send(`user with the name ${user.first_name} added to the database`);
 
   let newDocument = req.body;
-  const userId = uuidv4(); //generate user id
-  console.log(userId);
+  const userId = uuidv4(); //generate user id  
 
   const userWithId = { ...newDocument, _id: userId }; // titik tiga untuk property user yang nanti kita tambahkan, tambahkan id didalam titik tiga itu
 
