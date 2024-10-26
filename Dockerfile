@@ -1,18 +1,15 @@
 FROM node:20.10.0
 
-#buat nodejs app direktori pada container
-
+# Buat nodejs app direktori pada container
 WORKDIR /usr/src/app
 
-# copy semua file package.json ke dalam direktori nodejs app di container
+# Copy semua file package.json ke dalam direktori nodejs app di container
 COPY package*.json ./
 
-Run npm install
+# Jalankan perintah npm install untuk menginstal dependensi yang diperlukan
+RUN npm install
 
-#jalankan perintah npm install untuk menginstal dependensi yang diperlukan
-
-#bundle app source
-
+# Bundle app source
 COPY . .
 
 EXPOSE 3001

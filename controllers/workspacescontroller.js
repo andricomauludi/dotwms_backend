@@ -7,23 +7,22 @@ import express from "express";
 import fs from "fs";
 import SubItemModel from "../models/subitemmodel.js";
 import GroupProjectModel from "../models/groupprojectmodel.js";
-import { google } from 'googleapis'; // Jika Anda menggunakan ES Modules
+import { google } from "googleapis"; // Jika Anda menggunakan ES Modules
 import axios from "axios";
-
+import dotenv from "dotenv";
+import { Readable } from "stream";
 
 const app = express();
+dotenv.config();
 
 uuidv4();
 
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const REDIRECT_URI = process.env.REDIRECT_URI;
-const REFRESH_TOKEN =
-  process.env.REFRESH_TOKEN;
+const REFRESH_TOKEN = process.env.REFRESH_TOKEN;
 const FOLDER_ID = process.env.FOLDER_ID; // ID dari folder di Google Drive tempat file akan diupload
 
-
-console.log(CLIENT_ID)
 const oauth2Client = new google.auth.OAuth2(
   CLIENT_ID,
   CLIENT_SECRET,
@@ -81,9 +80,17 @@ const getFileFromGoogleDrive = async (fileId) => {
 };
 // Fungsi upload file ke Google Drive menggunakan async/await
 const uploadFile = async (filename, file, folderId) => {
-  const bufferStream = new Readable();
+  const bufferStream = new Readable();  
   bufferStream.push(file.buffer);
   bufferStream.push(null); // Menandakan akhir stream
+  // Debugging: Check if buffer is valid
+  if (Buffer.isBuffer(file.buffer)) {
+    console.log("Buffer is active and valid. Size:", file.buffer.length);
+    console.log("First 20 bytes of buffer:", file.buffer.slice(0, 20));
+  } else {
+    console.error("Invalid buffer:", file.buffer);
+    return null;
+  }
   try {
     await refreshAccessToken(); // Ensure the token is fresh before making the request
     const fileMetadata = {
@@ -483,7 +490,7 @@ export const createTableProject = async (req, res) => {
       newDocument.contentposting = contentposting[0].filename;
     }
 
-    const resultContentPosting = await createUpdateContentPosting(
+    const resultContentPosting = await createUpdateContentPosting2(
       newDocument,
       projectid,
       contentposting
@@ -542,7 +549,7 @@ export const createSubItem = async (req, res) => {
     result.avatar = base64Encode(result.avatar, "profile_picture");
 
     // Emit only to the clients listening for this specific `table_project_id`
-    req.io.emit(`newSubItem_${result.table_project_id}`, result);    
+    req.io.emit(`newSubItem_${result.table_project_id}`, result);
 
     res.status(201).send({
       status: 1,
@@ -551,7 +558,6 @@ export const createSubItem = async (req, res) => {
     });
   }
 };
-
 
 export const getAllGroupProject = async (req, res) => {
   try {
@@ -658,7 +664,10 @@ export const showContentPosting = async (req, res) => {
       body.file_type == "image/jpeg" ||
       body.file_type == "image/jpg"
     ) {
-      const contentfile = base64EncodeContentPosting(body.file_name, "contentposting");
+      const contentfile = base64EncodeContentPosting(
+        body.file_name,
+        "contentposting"
+      );
 
       return res
         .status(200)
@@ -1123,7 +1132,9 @@ export const editSubItem = async (req, res) => {
   const updates = {
     $set: newDocument,
   };
-  let result = await SubItemModel.findByIdAndUpdate(query, updates, { new: true });
+  let result = await SubItemModel.findByIdAndUpdate(query, updates, {
+    new: true,
+  });
   if (!result)
     res
       .send({
@@ -1131,9 +1142,9 @@ export const editSubItem = async (req, res) => {
         message: `data not found`,
       })
       .status(404);
-  else{
+  else {
     result.avatar = base64Encode(result.avatar, "profile_picture");
-    req.io.emit("subItemEdited", result);    
+    req.io.emit("subItemEdited", result);
     res
       .send({
         status: 1,
@@ -1141,7 +1152,6 @@ export const editSubItem = async (req, res) => {
         result,
       })
       .status(200);
-    
   }
 };
 export const editTableProject = async (req, res) => {
@@ -1160,7 +1170,7 @@ export const editTableProject = async (req, res) => {
       newDocument.contentposting = contentposting[0].filename;
       // }
     }
-    const resultContentPosting = await createUpdateContentPosting(
+    const resultContentPosting = await createUpdateContentPosting2(
       newDocument,
       newDocument._id,
       contentposting

@@ -32,47 +32,21 @@ import { myTask, myTaskDone } from "../controllers/mytaskcontroller.js";
 
 const router = express.Router();
 
-// membuat konfigurasi diskStorage multer
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-  
-    if (file.fieldname === "contentposting") {
-      cb(null, "./assets/contentposting/");
-    }
- 
-  },
-  filename: (req, file, cb) => {
-   
-    if (file.fieldname === "contentposting") {
-      cb(null, Date.now() + "-" + file.originalname);
-    }
-   
-  },
-});
+// Set up multer with memory storage
+const storage = multer.memoryStorage();
 
 const uploads = multer({
   storage: storage,
   limits: {
-    fileSize: 1024 * 1024 * 300, //300MB
+    fileSize: 1024 * 1024 * 300, // 300MB limit
   },
   fileFilter: (req, file, cb) => {
     checkFileType(file, cb);
   },
 });
+
+// Function to check file type
 function checkFileType(file, cb) {
-  // if (file.fieldname === "contenttext" || file.fieldname === "postingcaption") {
-  //   if (
-  //     file.mimetype === "application/pdf" ||
-  //     file.mimetype === "application/msword" ||
-  //     file.mimetype ===
-  //       "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-  //   ) {
-  //     // check file type to be pdf, doc, or docx
-  //     cb(null, true);
-  //   } else {
-  //     cb(null, false); // else fails
-  //   }
-  // } else
   if (file.fieldname === "contentposting") {
     if (
       file.mimetype === "image/png" ||
@@ -82,14 +56,16 @@ function checkFileType(file, cb) {
       file.mimetype === "video/x-matroska" ||
       file.mimetype === "video/mp4"
     ) {
-      // check file type to be png, jpeg, or jpg
-      cb(null, true);
+      cb(null, true); // Accept these types
     } else {
-      cb(null, true); // else fails
+      cb(null, false); // Reject unsupported file types
     }
+  } else {
+    cb(new Error('Invalid fieldname')); // Handle unexpected fieldname
   }
 }
-//at the save function
+
+// Middleware for multiple uploads
 const multipleUpload = uploads.fields([
   { name: "contentposting" },
 ]);
