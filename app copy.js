@@ -25,8 +25,8 @@ app.use(express.urlencoded({ extended: true })); //extended true akan menghilang
 mongoose.connect(process.env.mongodb_connection);
 
 const corsOptions = {
-  // origin: 'https://wms.dots.co.id',
-  origin: 'http://localhost:3000',
+  origin: 'https://wms.dots.co.id',
+  // origin: 'http://localhost:3000',
   credentials: true,
 };
 
