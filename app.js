@@ -39,6 +39,13 @@ app.use(express.urlencoded({ extended: true })); //extended true akan menghilang
 
 mongoose.connect(process.env.mongodb_connection);
 
+const corsOptions = {
+  origin: "https://wms.dots.co.id",
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+
 app.use("/users", usersRoutes);
 app.use("/workspaces", workspacesRoutes);
 app.use("/dashboard", dashboardRoutes);
