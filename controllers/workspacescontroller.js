@@ -116,6 +116,18 @@ const uploadFile = async (filename, file, folderId) => {
   }
 };
 
+const deleteFileFromGoogleDrive = async (fileId) => {
+  try {
+    await refreshAccessToken();
+    const res = await drive.files.delete({ fileId });
+    console.log(`🗑️ Deleted file ${fileId} from Google Drive`);
+    return res.status === 204;
+  } catch (err) {
+    console.error("❌ Error deleting from Google Drive:", err.message);
+    return false;
+  }
+};
+
 // Endpoint Express.js untuk upload file
 export const uploadHandler = async (req, res) => {
   let newDocument = req.body;
@@ -406,71 +418,58 @@ async function createUpdateContentPosting2(
   // }
 }
 export const deleteContentPosting = async (req, res) => {
-  const ids = req.body.id;
+  try {
+    const ids = req.body.id;
 
-  const contentposting = await ContentPostingsModel.find({
-    _id: {
-      $in: ids,
-    },
-  }).select({ file_name: 1, _id: 0 });
+    // Ambil data file dari DB
+    const contents = await ContentPostingsModel.find({
+      _id: { $in: ids },
+    }).select({ file_name: 1});
 
-  for (let i = 0; i < contentposting.length; i++) {
-    const path = "./assets/contentposting/" + contentposting[i].file_name;
-    fs.unlink(path, (err) => {
-      if (err) {
-        res
-          .send({
-            status: -1,
-            message: "Error while deleting file on directory",
-            err,
-          })
-          .status(401);
-      }
+    // Jalankan penghapusan paralel untuk efisiensi
+    await Promise.all(
+      contents.map(async (item) => {
+        // 1️⃣ Hapus file lokal
+        if (item.file_name) {
+          const localPath = `./assets/contentposting/${item.file_name}`;
+          try {
+            await fs.unlink(localPath);
+            console.log(`🗑️ Deleted local file: ${item.file_name}`);
+          } catch (err) {
+            console.warn(`⚠️ File ${item.file_name} not found or already deleted.`);
+          }
+        }
+
+        // 2️⃣ Hapus file dari Google Drive
+        console.log(item.file_name)
+        if (item.file_name) {
+          await deleteFileFromGoogleDrive(item.file_name);
+        }
+      })
+    );
+
+    // 3️⃣ Hapus data dari MongoDB
+    const result = await ContentPostingsModel.deleteMany({ _id: { $in: ids } });
+
+    if (result.deletedCount > 0) {
+      return res.status(200).json({
+        status: 1,
+        message: "✅ Content Posting deleted successfully (local + Drive + DB)",
+      });
+    } else {
+      return res.status(404).json({
+        status: 0,
+        message: "No content found to delete",
+      });
+    }
+  } catch (err) {
+    console.error("❌ Error in deleteContentPosting:", err);
+    return res.status(500).json({
+      status: -1,
+      message: "Error while deleting content posting",
+      error: err.message,
     });
   }
-
-  const result = await ContentPostingsModel.deleteMany({
-    _id: { $in: ids }, //bulking delete
-  });
-  if (result) {
-    return res
-      .send({
-        status: 1,
-        message: "Content Posting deleted successfully",
-      })
-      .status(200);
-  }
-  return res
-    .send({
-      status: 1,
-      message: "Failed while deleting data on database",
-    })
-    .status(400);
-
-  // var idList = ["559e0dbd045ac712fa1f19fa","559e0dbe045ac712fa1f19fb"];
-
-  // var pincode = mongoose.model('pincode');
-
-  // pincode.find({ "city_id": { "$in": idList } },function(err,docs) {
-  //    // do something here
-  // });
-
-  // try {
-  //   const query = { file_name: req.params.file_name };
-  //   let result = await UsersModel.deleteOne(query);
-
-  //   if (!result)
-  //     return res.status(404).json({ status: 0, message: `Data not Found` });
-
-  //   return res.status(200).json({
-  //     status: 1,
-  //     message: `User with id ` + req.params.id + ` is deleted`,
-  //   });
-  // } catch (error) {
-  //   return res
-  //     .status(400)
-  //     .json({ status: -1, message: `Error on delete user` });
-  // }
 };
 export const createTableProject = async (req, res) => {
   let newDocument = req.body;

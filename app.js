@@ -17,8 +17,8 @@ const server = http.createServer(app);
 // Initialize Socket.IO with the server
 const io = new Server(server, {
   cors: {
-    origin: "https://wms.dots.co.id", // Specify the allowed origin
-    // origin: '*', // Specify the allowed origin
+    // origin: "https://wms.dots.co.id", // Specify the allowed origin
+    origin: 'http://localhost:3000', // Specify the allowed origin
     credentials: true,
     methods: ["GET", "POST", "PATCH"], // Specify allowed methods'
   },
@@ -38,13 +38,14 @@ app.use((req, res, next) => {
 app.use(express.urlencoded({ extended: true })); //extended true akan menghilangkan object :null protoype, kalo false akan muncul si objectnya
 
 mongoose.connect(process.env.mongodb_connection);
-
-// const corsOptions = {
-//   origin: "https://wms.dots.co.id",
-//   credentials: true,
-// };
-
-// app.use(cors(corsOptions));
+// ✅ Tambahkan ini
+app.use(
+  cors({
+    origin: "*",
+    credentials: true,
+    methods: ["GET", "POST", "PATCH", "DELETE"],
+  })
+);
 
 app.use("/users", usersRoutes);
 app.use("/workspaces", workspacesRoutes);

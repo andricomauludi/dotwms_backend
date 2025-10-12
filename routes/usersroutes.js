@@ -25,7 +25,7 @@ const upload = multer(); // Initialize multer without any storage settings
 //all routes in here are starting with /users
 router.get("/", verifyToken, getAllUser);
 
-router.post("/", verifyToken, createUser);
+router.post("/", createUser);
 
 //router ini untuk mendapatkan params dengan key id
 router.get("/detail/:id", verifyToken, detailUser);
