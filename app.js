@@ -18,7 +18,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     // origin: "https://wms.dots.co.id", // Specify the allowed origin
-    origin: 'http://localhost:3000', // Specify the allowed origin
+    origin: '*', // Specify the allowed origin
     credentials: true,
     methods: ["GET", "POST", "PATCH"], // Specify allowed methods'
   },
