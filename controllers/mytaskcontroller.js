@@ -22,13 +22,13 @@ export const myTaskOld = async (req, res) => {
     if (!subItem)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
-    for (let i = 0; i < subItem.length; i++) {
-      const contentsavatar = base64Encode(
-        subItem[i]["avatar"],
-        "profile_picture"
-      );
-      subItem[i]["avatar"] = await contentsavatar;
-    }
+    // for (let i = 0; i < subItem.length; i++) {
+    //   const contentsavatar = base64Encode(
+    //     subItem[i]["avatar"],
+    //     "profile_picture"
+    //   );
+    //   subItem[i]["avatar"] = await contentsavatar;
+    // }
 
     return res.status(200).json({ status: 1, message: `Get My Task`, subItem });
   } catch (error) {
@@ -80,11 +80,11 @@ export const myTask = async (req, res) => {
       }
 
       // If all checks pass, process the subItem
-      const contentsavatar = base64Encode(
-        subItem[i]["avatar"],
-        "profile_picture"
-      );
-      subItem[i]["avatar"] = await contentsavatar;
+      // const contentsavatar = base64Encode(
+      //   subItem[i]["avatar"],
+      //   "profile_picture"
+      // );
+      // subItem[i]["avatar"] = await contentsavatar;
       subItem[i]["item"] = await tableprojectid[0]["item"];
       subItem[i]["project_name"] = await projectid[0]["project_name"];
       subItem[i]["group_project_name"] = await groupproject[0]["group_project"];
@@ -150,11 +150,11 @@ export const myTaskDone = async (req, res) => {
       }
 
       // If all checks pass, process the subItem
-      const contentsavatar = base64Encode(
-        subItem[i]["avatar"],
-        "profile_picture"
-      );
-      subItem[i]["avatar"] = await contentsavatar;
+      // const contentsavatar = base64Encode(
+      //   subItem[i]["avatar"],
+      //   "profile_picture"
+      // );
+      // subItem[i]["avatar"] = await contentsavatar;
       subItem[i]["item"] = await tableprojectid[0]["item"];
       subItem[i]["project_name"] = await projectid[0]["project_name"];
       subItem[i]["group_project_name"] = await groupproject[0]["group_project"];
