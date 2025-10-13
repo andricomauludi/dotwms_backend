@@ -145,13 +145,13 @@ export const getAllUserDashboard = async (req, res) => {
     if (!user)
       return res.status(404).json({ status: 0, message: `Data not Found` });
 
-    for (let i = 0; i < user.length; i++) {
-      const content = base64Encode(
-        user[i]["profile_picture"],
-        "profile_picture"
-      );
-      user[i]["profile_picture"] = await content;
-    }
+    // for (let i = 0; i < user.length; i++) {
+    //   const content = base64Encode(
+    //     user[i]["profile_picture"],
+    //     "profile_picture"
+    //   );
+    //   user[i]["profile_picture"] = await content;
+    // }
 
     return res.status(200).json({ status: 1, message: `Get All Users`, user });
   } catch (error) {
