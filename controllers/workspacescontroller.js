@@ -80,7 +80,7 @@ const getFileFromGoogleDrive = async (fileId) => {
 };
 // Fungsi upload file ke Google Drive menggunakan async/await
 const uploadFile = async (filename, file, folderId) => {
-  const bufferStream = new Readable();  
+  const bufferStream = new Readable();
   bufferStream.push(file.buffer);
   bufferStream.push(null); // Menandakan akhir stream
   // Debugging: Check if buffer is valid
@@ -424,7 +424,7 @@ export const deleteContentPosting = async (req, res) => {
     // Ambil data file dari DB
     const contents = await ContentPostingsModel.find({
       _id: { $in: ids },
-    }).select({ file_name: 1});
+    }).select({ file_name: 1 });
 
     // Jalankan penghapusan paralel untuk efisiensi
     await Promise.all(
@@ -436,12 +436,14 @@ export const deleteContentPosting = async (req, res) => {
             await fs.unlink(localPath);
             console.log(`🗑️ Deleted local file: ${item.file_name}`);
           } catch (err) {
-            console.warn(`⚠️ File ${item.file_name} not found or already deleted.`);
+            console.warn(
+              `⚠️ File ${item.file_name} not found or already deleted.`
+            );
           }
         }
 
         // 2️⃣ Hapus file dari Google Drive
-        console.log(item.file_name)
+        console.log(item.file_name);
         if (item.file_name) {
           await deleteFileFromGoogleDrive(item.file_name);
         }
@@ -472,64 +474,85 @@ export const deleteContentPosting = async (req, res) => {
   }
 };
 export const createTableProject = async (req, res) => {
-  let newDocument = req.body;
+  try {
+    let newDocument = req.body;
+    const projectId = newDocument.project_id; // pastikan frontend kirim project_id
+    const tableId = uuidv4();
 
-  const projectid = uuidv4();
-  newDocument._id = projectid;
-  newDocument.created_at = new Date();
+    newDocument._id = tableId;
+    newDocument.created_at = new Date();
 
-  const contentposting = req.files["contentposting"];
+    const contentposting = req.files?.["contentposting"];
 
-  if (contentposting) {
-    if (contentposting.length > 1) {
-      for (let i = 0; i < contentposting.length; i++) {
-        newDocument.contentposting = contentposting[i].filename;
+    // 🔹 Upload file kalau ada
+    if (contentposting && contentposting.length > 0) {
+      if (contentposting.length > 1) {
+        for (let i = 0; i < contentposting.length; i++) {
+          newDocument.contentposting = contentposting[i].filename;
+        }
+      } else {
+        newDocument.contentposting = contentposting[0].filename;
       }
-    } else {
-      newDocument.contentposting = contentposting[0].filename;
+
+      const resultContentPosting = await createUpdateContentPosting2(
+        newDocument,
+        tableId,
+        contentposting
+      );
+
+      if (resultContentPosting === 0) {
+        return res.status(400).send({
+          status: 0,
+          message: "Error while uploading file, please try again",
+        });
+      }
     }
 
-    const resultContentPosting = await createUpdateContentPosting2(
-      newDocument,
-      projectid,
-      contentposting
-    );
-
-    if (resultContentPosting === 0) {
-      return res.status(404).send({
+    // 🔹 Simpan ke database
+    const result = await TableProjectsModel.create(newDocument);
+    if (!result) {
+      return res.status(400).send({
         status: 0,
-        message: `Error while uploading file, please try again`,
+        message: "Cannot create data in the database",
       });
     }
-  }
 
-  const result = await TableProjectsModel.create(newDocument);
-  // Base64 encode the avatars before saving and emitting the event
+    // 🔹 Encode avatar (biar konsisten kayak endpoint lain)
+    newDocument.lead_avatar = base64Encode(
+      newDocument.lead_avatar,
+      "profile_picture"
+    );
+    newDocument.updated_by_avatar = base64Encode(
+      newDocument.updated_by_avatar,
+      "profile_picture"
+    );
 
-  if (!result) {
-    return res.status(404).send({
+    // 🧩 Emit hanya ke room project_id terkait
+    if (req.io) {
+      req.io.emit("newTableProject", {
+        projectId, // penting buat filter di frontend
+        newTableProject: newDocument,
+      });
+      console.log(
+        `New table project emitted globally for project ${projectId}`
+      );
+    }
+
+    return res.status(201).send({
+      status: 1,
+      message: "Table Project created",
+      result,
+    });
+  } catch (error) {
+    console.error("Error in createTableProject:", error);
+    return res.status(500).send({
       status: 0,
-      message: `Cannot create data in the database`,
+      message: "Internal Server Error",
+      error: error.message,
     });
   }
-  newDocument.lead_avatar = base64Encode(
-    newDocument.lead_avatar,
-    "profile_picture"
-  );
-  newDocument.updated_by_avatar = base64Encode(
-    newDocument.updated_by_avatar,
-    "profile_picture"
-  );
-
-  // Emit event to all connected clients
-  req.io.emit("newTableProject", newDocument);
-
-  return res.status(201).send({
-    status: 1,
-    message: "Table Project created",
-    result,
-  });
 };
+
 export const createSubItem = async (req, res) => {
   let newDocument = req.body;
   const projectid = uuidv4(); // Generate a unique ID for the sub-item
@@ -548,7 +571,15 @@ export const createSubItem = async (req, res) => {
     result.avatar = base64Encode(result.avatar, "profile_picture");
 
     // Emit only to the clients listening for this specific `table_project_id`
-    req.io.emit(`newSubItem_${result.table_project_id}`, result);
+    console.log(
+      "🟢 Emitting newSubItem for table:",
+      newDocument.table_project_id
+    );
+
+    req.io.emit("newSubItem", {
+      projectId: newDocument.table_project_id,
+      newSubItem: newDocument,
+    });
 
     res.status(201).send({
       status: 1,
@@ -795,14 +826,14 @@ export const getProjectByGroupProject = async (req, res) => {
 };
 export const getAllTableByProject = async (req, res) => {
   try {
-    const query = { project_id: req.params.id };
+    const projectId = req.params.id;
+    const query = { project_id: projectId };
     const tableproject = await TableProjectsModel.find(query).lean();
 
     if (!tableproject) {
       return res.status(404).json({ status: 0, message: `Data not Found` });
     }
 
-    // Encode avatar images asynchronously
     const encodeAvatar = async (avatarPath) =>
       base64Encode(avatarPath, "profile_picture");
 
@@ -817,12 +848,18 @@ export const getAllTableByProject = async (req, res) => {
       })
     );
 
-    // Emit event to all connected clients
-    req.io.emit("tableProjectData", tableproject);
+    // 🔹 Emit hanya ke room sesuai ID project
+    req.io.to(projectId).emit("tableProjectData", {
+      projectId, // biar frontend bisa bedain ID-nya
+      tableproject,
+    });
+    console.log("tableproject data lewat");
 
-    return res
-      .status(200)
-      .json({ status: 1, message: `Get All Table Projects`, tableproject });
+    return res.status(200).json({
+      status: 1,
+      message: `Get All Table Projects`,
+      tableproject,
+    });
   } catch (error) {
     return res.status(400).json({
       status: 0,
@@ -960,24 +997,34 @@ export const deleteUser = async (req, res) => {
 };
 export const deleteTableProject = async (req, res) => {
   try {
-    const query = { _id: req.params.id };
-    let result = await TableProjectsModel.deleteOne(query);
+    const projectId = req.params.id;
 
-    if (!result)
-      return res.status(404).json({ status: 0, message: `Data not Found` });
+    // Cari dulu data sebelum dihapus biar bisa di-broadcast
+    const deletedProject = await TableProjectsModel.findById(req.params.id);
+    if (!deletedProject) {
+      return res.status(404).json({ status: 0, message: "Data not found" });
+    }
 
-    req.io.emit("tableProjectDeleted", { projectId: req.params.id });
+    await TableProjectsModel.deleteOne({ _id: req.params.id });
+
+    req.io.emit("tableProjectDeleted", {
+      projectId: deletedProject.project_id, // ambil project_id dari record
+      deletedProject,
+    });
 
     return res.status(200).json({
       status: 1,
-      message: `Table Project with id ` + req.params.id + ` is deleted`,
+      message: `Table Project with id ${req.params.id} is deleted`,
     });
   } catch (error) {
-    return res
-      .status(400)
-      .json({ status: -1, message: `Error on delete Table Project` });
+    console.error("Error in deleteTableProject:", error);
+    return res.status(400).json({
+      status: -1,
+      message: `Error on delete Table Project`,
+    });
   }
 };
+
 export const deleteGroupProject = async (req, res) => {
   try {
     const query = { _id: req.params.id };
@@ -1022,16 +1069,23 @@ export const deleteProject = async (req, res) => {
 };
 export const deleteSubItem = async (req, res) => {
   try {
-    const query = { _id: req.params.id };
-    let result = await SubItemModel.deleteOne(query);
-
-    if (!result)
+    // Cari dulu subitem yang akan dihapus
+    const deletedSubItem = await SubItemModel.findById(req.params.id);
+    if (!deletedSubItem) {
       return res.status(404).json({ status: 0, message: `Data not Found` });
+    }
 
-    req.io.emit("subItemDeleted", { projectId: req.params.id });
+    await SubItemModel.deleteOne({ _id: req.params.id });
+
+    // Emit event sesuai frontend
+    req.io.emit("subItemDeleted", {
+      projectId: deletedSubItem.table_project_id, // pastikan ini cocok dengan frontend
+      deletedSubItem,
+    });
+
     return res.status(200).json({
       status: 1,
-      message: `Sub Item with id ` + req.params.id + ` is deleted`,
+      message: `Sub Item with id ${req.params.id} is deleted`,
     });
   } catch (error) {
     return res
@@ -1125,91 +1179,118 @@ export const editProject = async (req, res) => {
   }
 };
 export const editSubItem = async (req, res) => {
-  let newDocument = req.body;
-  const query = { _id: newDocument._id }; //pake ini kalo idnya pake uuid
+  try {
+    const newDocument = req.body;
+    const query = { _id: newDocument._id };
 
-  const updates = {
-    $set: newDocument,
-  };
-  let result = await SubItemModel.findByIdAndUpdate(query, updates, {
-    new: true,
-  });
-  if (!result)
-    res
-      .send({
+    const updates = { $set: newDocument };
+    const updatedSubItem = await SubItemModel.findByIdAndUpdate(
+      query,
+      updates,
+      {
+        new: true,
+      }
+    );
+
+    if (!updatedSubItem) {
+      return res.status(404).send({
         status: 0,
         message: `data not found`,
-      })
-      .status(404);
-  else {
-    result.avatar = base64Encode(result.avatar, "profile_picture");
-    req.io.emit("subItemEdited", result);
-    res
-      .send({
-        status: 1,
-        message: `Sub Item with id ${req.params.id} successfully updated`,
-        result,
-      })
-      .status(200);
+      });
+    }
+
+    updatedSubItem.avatar = base64Encode(
+      updatedSubItem.avatar,
+      "profile_picture"
+    );
+
+    // Emit event sesuai frontend
+    req.io.emit("subItemEdited", {
+      projectId: updatedSubItem.table_project_id, // harus sama fieldnya dengan frontend filter
+      updatedSubItem,
+    });
+
+    return res.status(200).send({
+      status: 1,
+      message: `Sub Item with id ${updatedSubItem._id} successfully updated`,
+      result: updatedSubItem,
+    });
+  } catch (error) {
+    return res.status(400).send({
+      status: -1,
+      message: `Error on edit Sub Item`,
+    });
   }
 };
+
 export const editTableProject = async (req, res) => {
-  let newDocument = req.body;
-  const query = { _id: newDocument._id }; //pake ini kalo idnya pake uuid
+  try {
+    let newDocument = req.body;
+    const query = { _id: newDocument._id }; // pakai uuid
 
-  const contentposting = req.files["contentposting"];
+    const contentposting = req.files?.["contentposting"];
 
-  if (contentposting) {
-    if (contentposting.length > 1) {
-      for (let i = 0; i < contentposting.length; i++) {
-        newDocument.contentposting = contentposting[i].filename;
+    if (contentposting) {
+      if (contentposting.length > 1) {
+        for (let i = 0; i < contentposting.length; i++) {
+          newDocument.contentposting = contentposting[i].filename;
+        }
+      } else {
+        newDocument.contentposting = contentposting[0].filename;
       }
-    } else {
-      // if (contentposting) {
-      newDocument.contentposting = contentposting[0].filename;
-      // }
-    }
-    const resultContentPosting = await createUpdateContentPosting2(
-      newDocument,
-      newDocument._id,
-      contentposting
-    );
-    if (resultContentPosting == 0) {
-      res
-        .send({
+
+      const resultContentPosting = await createUpdateContentPosting2(
+        newDocument,
+        newDocument._id,
+        contentposting
+      );
+
+      if (resultContentPosting === 0) {
+        return res.status(400).send({
           status: 0,
-          message: `Error while upload file, please try again`,
-          result,
-        })
-        .status(401);
+          message: `Error while uploading file, please try again`,
+        });
+      }
     }
-  }
-  const updates = {
-    $set: newDocument,
-  };
-  let result = await TableProjectsModel.findByIdAndUpdate(query, updates, {
-    new: true,
-  });
-  if (!result)
-    res
-      .send({
+
+    const updates = { $set: newDocument };
+
+    let result = await TableProjectsModel.findByIdAndUpdate(query, updates, {
+      new: true,
+    });
+
+    if (!result) {
+      return res.status(404).send({
         status: 0,
-        message: `data not found`,
-      })
-      .status(404);
-  else {
+        message: `Data not found`,
+      });
+    }
+
+    // Encode avatar
     result.lead_avatar = base64Encode(result.lead_avatar, "profile_picture");
     result.updated_by_avatar = base64Encode(
       result.updated_by_avatar,
       "profile_picture"
     );
-    req.io.emit("tableProjectEdited", result);
-    res
-      .send({
-        status: 1,
-        message: `Table Project with id ${newDocument._id} successfully updated`,
-        result,
-      })
-      .status(200);
+
+    // Emit ke semua client
+    const projectId = newDocument.project_id; // ambil project_id dari dokumen
+
+    req.io.emit("tableProjectEdited", {
+      projectId, // kirim project_id yang benar
+      updatedProject: result,
+    });
+
+    res.status(200).send({
+      status: 1,
+      message: `Table Project with id ${newDocument._id} successfully updated`,
+      result,
+    });
+  } catch (error) {
+    console.error("Error in editTableProject:", error);
+    return res.status(500).send({
+      status: -1,
+      message: "Internal server error",
+    });
   }
 };
