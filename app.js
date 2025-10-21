@@ -17,8 +17,8 @@ const server = http.createServer(app);
 // Initialize Socket.IO with the server
 const io = new Server(server, {
   cors: {
-    // origin: "https://wms.dots.co.id", // Specify the allowed origin
-    origin: 'http://localhost:3000', // Specify the allowed origin
+    origin: "https://wms.dots.co.id", // Specify the allowed origin
+    // origin: 'http://localhost:3000', // Specify the allowed origin
     // origin: "http://103.196.152.87:3000", // Specify the allowed origin
     credentials: true,
     methods: ["GET", "POST", "PATCH"], // Specify allowed methods'
@@ -42,8 +42,8 @@ mongoose.connect(process.env.mongodb_connection);
 // ✅ Tambahkan ini
 app.use(
   cors({
-    // origin: "https://wms.dots.co.id", // Specify the allowed origin
-    origin: "http://localhost:3000",
+    origin: "https://wms.dots.co.id", // Specify the allowed origin
+    // origin: "http://localhost:3000",
     // origin: "http://103.196.152.87:3000",
     credentials: true,
     methods: ["GET", "POST", "PATCH", "DELETE"],
