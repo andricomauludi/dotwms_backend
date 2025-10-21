@@ -227,33 +227,40 @@ export const createGroupProject = async (req, res) => {
 };
 
 export const createProject = async (req, res) => {
-  // Create a new blog post object
-  let newDocument = req.body;
-  const projectid = uuidv4(); //generate user id
-  newDocument._id = projectid;
-  newDocument.created_at = new Date();
-  const result = await ProjectsModel.create(newDocument);
+  try {
+    let newDocument = req.body;
+    const projectid = uuidv4();
+    newDocument._id = projectid;
+    newDocument.created_at = new Date();
 
-  if (!result)
-    res
-      .send({
+    const result = await ProjectsModel.create(newDocument);
+
+    if (!result) {
+      return res.status(404).send({
         status: 0,
-        message: `Cannot create data in database`,
-        result,
-      })
-      .status(404);
-  else {
-    req.io.emit("newProject", result);
+        message: "Cannot create data in database",
+      });
+    }
 
-    res
-      .send({
-        status: 1,
-        message: "Project created",
-        result,
-      })
-      .status(201);
+    // ✅ Emit hanya ke room sesuai group_project_id
+    console.log("🟢 Emitting to room:", result.group_project_id);
+    req.io.to(result.group_project_id).emit("newProject", result);
+
+    return res.status(201).send({
+      status: 1,
+      message: "Project created",
+      result,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send({
+      status: -1,
+      message: "Internal server error",
+      error: error.message,
+    });
   }
 };
+
 
 export const streamVideo = async (req, res) => {
   let file_name = req.params.name;

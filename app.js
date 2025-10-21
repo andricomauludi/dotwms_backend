@@ -63,3 +63,21 @@ server.listen(PORT, () =>
 ); //untuk menjalankan listen, console log bisa diganti dengan aplikasi rest yang mau kita tampilkan
 
 // Socket.IO connection event
+io.on("connection", (socket) => {
+  console.log("🟢 User connected:", socket.id);
+
+  socket.on("joinGroupProject", (groupId) => {
+    socket.join(groupId);
+    console.log(`👥 Socket ${socket.id} joined room ${groupId}`);
+  });
+
+  socket.on("leaveGroupProject", (groupId) => {
+    socket.leave(groupId);
+    console.log(`🚪 Socket ${socket.id} left room ${groupId}`);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("🔴 User disconnected:", socket.id);
+  });
+});
+
