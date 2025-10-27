@@ -170,7 +170,9 @@ export const uploadHandler2 = async (req, res) => {
   try {
     const uploadPromises = files.map(async (file) => {
       // Upload file ke Google Drive
-      const filename = Date.now() + "-" + file.originalname;
+      const timestampwib = getTimestampWIB();
+      const filename = `${timestampwib}` + "-" + item.originalname;
+
       return await uploadFile(filename, file, FOLDER_ID);
     });
 
@@ -260,7 +262,6 @@ export const createProject = async (req, res) => {
     });
   }
 };
-
 
 export const streamVideo = async (req, res) => {
   let file_name = req.params.name;
@@ -359,6 +360,22 @@ async function createUpdateContentPosting(
   //   return hasilbener;
   // }
 }
+function getTimestampWIB() {
+  const date = new Date();
+
+  // Konversi ke WIB (UTC +7)
+  const wibTime = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+
+  const year = wibTime.getUTCFullYear();
+  const month = String(wibTime.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(wibTime.getUTCDate()).padStart(2, "0");
+  const hours = String(wibTime.getUTCHours()).padStart(2, "0");
+  const minutes = String(wibTime.getUTCMinutes()).padStart(2, "0");
+  const seconds = String(wibTime.getUTCSeconds()).padStart(2, "0");
+
+  // Format: YYYY-MM-DD_HH-mm-ss
+  return `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
+}
 async function createUpdateContentPosting2(
   newDocument,
   projectid,
@@ -369,7 +386,8 @@ async function createUpdateContentPosting2(
 
   // if (!tableproject) {
   let itemsUpload = contentposting.map(async (item) => {
-    const filename = Date.now() + "-" + item.originalname;
+    const timestampwib = getTimestampWIB();
+    const filename = `${timestampwib}` + "-" + item.originalname;    
     const id_file = await uploadFile(filename, item, FOLDER_ID);
     return {
       _id: uuidv4(),
@@ -723,14 +741,30 @@ export const showContentPosting = async (req, res) => {
   }
 };
 export const showContentPosting2 = async (req, res) => {
-  const body = req.body; //body isinya file_name sama file_type
+  const { file_name, file_type } = req.body;
+
   try {
-    const fileStream = await getFileFromGoogleDrive(body.file_name);
-    fileStream.pipe(res); // Stream the file directly to the response
+    const fileStream = await getFileFromGoogleDrive(file_name);
+
+    // Atur header sesuai tipe file
+    if (file_type === "video/mp4") {
+      res.setHeader("Content-Type", "video/mp4");
+      res.setHeader("Content-Disposition", `inline; filename="${file_name}"`);
+    } else if (file_type.startsWith("image/")) {
+      res.setHeader("Content-Type", file_type);
+      res.setHeader("Content-Disposition", `inline; filename="${file_name}"`);
+    } else {
+      res.setHeader("Content-Type", "application/octet-stream");
+      res.setHeader("Content-Disposition", `attachment; filename="${file_name}"`);
+    }
+
+    fileStream.pipe(res);
   } catch (error) {
+    console.error("Error retrieving file:", error);
     res.status(500).send("Error retrieving file");
   }
 };
+
 export const showContentPosting3 = async (req, res) => {
   const body = req.body; // body contains file_name and file_type
   try {
