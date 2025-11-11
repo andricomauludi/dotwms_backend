@@ -13,6 +13,7 @@ import {
   deleteSubItem,
   deleteTableProject,
   detailTableProject,
+  DuplicateProject,
   editGroupProject,
   editProject,
   editSubItem,
@@ -144,6 +145,13 @@ router.get(
   uploads.none(),
   verifyToken,
   getContentPostingByTable
+);
+
+router.post(
+  "/duplicate-project",
+  multipleUpload,
+  verifyToken,
+  DuplicateProject
 );
 router.get("/my-task/:id", uploads.none(), verifyToken, myTask);
 router.get("/my-task-done/:id", uploads.none(), verifyToken, myTaskDone);

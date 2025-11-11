@@ -5,10 +5,11 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import http from "http";
 import { Server } from "socket.io";
-
 import usersRoutes from "./routes/usersroutes.js";
 import dashboardRoutes from "./routes/dashboardroutes.js";
 import workspacesRoutes from "./routes/workspacesroutes.js";
+import swaggerUi from 'swagger-ui-express';
+import swaggerFile from './swagger.json' with { type: 'json' };
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ const io = new Server(server, {
   cors: {
     origin: "https://wms.dots.co.id", // Specify the allowed origin
     // origin: 'http://localhost:3000', // Specify the allowed origin
+    // origin: '*', // Specify the allowed origin
     // origin: "http://103.196.152.87:3000", // Specify the allowed origin
     credentials: true,
     methods: ["GET", "POST", "PATCH"], // Specify allowed methods'
@@ -44,6 +46,7 @@ app.use(
   cors({
     origin: "https://wms.dots.co.id", // Specify the allowed origin
     // origin: "http://localhost:3000",
+    // origin: "*",
     // origin: "http://103.196.152.87:3000",
     credentials: true,
     methods: ["GET", "POST", "PATCH", "DELETE"],
@@ -53,6 +56,12 @@ app.use(
 app.use("/users", usersRoutes);
 app.use("/workspaces", workspacesRoutes);
 app.use("/dashboard", dashboardRoutes);
+
+// Route Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile));
+
+
+
 
 app.get("/", (req, res) => {
   res.send("Hello from homepage");

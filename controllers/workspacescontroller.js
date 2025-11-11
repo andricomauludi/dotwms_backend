@@ -11,6 +11,7 @@ import { google } from "googleapis"; // Jika Anda menggunakan ES Modules
 import axios from "axios";
 import dotenv from "dotenv";
 import { Readable } from "stream";
+import mongoose from "mongoose";
 
 const app = express();
 dotenv.config();
@@ -387,7 +388,7 @@ async function createUpdateContentPosting2(
   // if (!tableproject) {
   let itemsUpload = contentposting.map(async (item) => {
     const timestampwib = getTimestampWIB();
-    const filename = `${timestampwib}` + "-" + item.originalname;    
+    const filename = `${timestampwib}` + "-" + item.originalname;
     const id_file = await uploadFile(filename, item, FOLDER_ID);
     return {
       _id: uuidv4(),
@@ -414,33 +415,6 @@ async function createUpdateContentPosting2(
   }
   const hasilbener = 1;
   return hasilbener;
-  // }
-  // else {
-  //   // MASUK UPDATE
-  //   console.log("masuk updatee");
-  //   let itemsUpload = contentposting.map((item) => {
-  //     return {
-  //       _id: uuidv4(),
-  //       table_project_id: projectid,
-  //       table_project_name: newDocument.item,
-  //       file_name: item.filename,
-  //       created_at: new Date(),
-  //       updated_at: new Date(),
-  //       created_by: newDocument.created_by,
-  //       updated_by: newDocument.updated_by,
-  //     };
-  //   });
-  //   const query = { table_project_id: newDocument._id };
-  //   await ContentPostingsModel.deleteMany(query);
-
-  //   const result = await ContentPostingsModel.insertMany(itemsUpload);
-  //   if (!result) {
-  //     const hasilgakbener = 0;
-  //     return hasilgakbener;
-  //   }
-  //   const hasilbener = 1;
-  //   return hasilbener;
-  // }
 }
 export const deleteContentPosting = async (req, res) => {
   try {
@@ -755,7 +729,10 @@ export const showContentPosting2 = async (req, res) => {
       res.setHeader("Content-Disposition", `inline; filename="${file_name}"`);
     } else {
       res.setHeader("Content-Type", "application/octet-stream");
-      res.setHeader("Content-Disposition", `attachment; filename="${file_name}"`);
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${file_name}"`
+      );
     }
 
     fileStream.pipe(res);
@@ -812,21 +789,6 @@ export const getContentPostingByTable = async (req, res) => {
       .lean();
     if (!contentPosting)
       return res.status(404).json({ status: 0, message: `Data not Found` });
-
-    // for (let i = 0; i < contentPosting.length; i++) {
-    // const contentfile = base64Encode(
-    //   contentPosting[i]["file_name"],
-    //   "contentPosting"
-    // );
-    // contentPosting[i]["file"] = await contentfile;
-    // if (contentPosting[i]['file_type']=="video/mp4") {
-
-    // }
-    // const contents = fs.readFileSync(
-    //   `./assets/` + "contentPosting" + `/` + contentPosting[i]["file_name"]
-    // );
-    // console.log(contentPosting[i]["file_name"]);
-    // }
 
     return res
       .status(200)
@@ -1332,6 +1294,207 @@ export const editTableProject = async (req, res) => {
     return res.status(500).send({
       status: -1,
       message: "Internal server error",
+    });
+  }
+};
+
+export const DuplicateProject = async (req, res) => {
+  try {
+    const newDocument = req.body;
+
+    // 🔹 Ambil project lama
+    const projectOld = await ProjectsModel.findOne({
+      _id: newDocument.old_project_id,
+    });
+
+    if (!projectOld) {
+      return res.status(200).json({
+        status: 0,
+        message: "Old project not found",
+      });
+    }
+
+    // 🔹 Duplicate project baru
+    const projectIdNew = uuidv4();
+    const projectNewData = {
+      ...projectOld.toObject(),
+      _id: projectIdNew,
+      group_project_id: newDocument.target_group_project_id,
+      group_project: newDocument.target_group_project,
+      created_at: new Date(),
+    };
+
+    const projectNew = await ProjectsModel.create(projectNewData);
+
+    // 🔹 Emit new project ke group target
+    if (req.io) {
+      req.io.to(projectNew.group_project_id).emit("newProject", projectNew);
+      console.log(
+        `🟢 Emitting new project to group: ${projectNew.group_project_id}`
+      );
+    }
+
+    // 🔹 Ambil semua table project lama
+    const tableProjectsOld = await TableProjectsModel.find({
+      project_id: newDocument.old_project_id,
+    }).lean();
+
+    if (!tableProjectsOld.length) {
+      return res.status(200).json({
+        status: 0,
+        message: "No table projects found for this project",
+      });
+    }
+
+    const newTableProjects = [];
+    const newSubItems = [];
+    const newContentPostings = [];
+
+    // 🔹 Loop semua table project lama
+    for (const table of tableProjectsOld) {
+      const tableIdNew = uuidv4();
+
+      // Duplicate table project
+      const tableNew = {
+        ...table,
+        _id: tableIdNew,
+        project_id: projectIdNew,
+        group_project_id: newDocument.target_group_project_id,
+        group_project: newDocument.target_group_project,
+        created_at: new Date(),
+      };
+      newTableProjects.push(tableNew);
+
+      // 🔹 Duplicate subItems
+      const subItemsOld = await SubItemModel.find({
+        table_project_id: table._id,
+      }).lean();
+
+      if (subItemsOld.length) {
+        subItemsOld.forEach((sub) => {
+          newSubItems.push({
+            ...sub,
+            _id: uuidv4(),
+            table_project_id: tableIdNew,
+            project_id: projectIdNew,
+            group_project_id: newDocument.target_group_project_id,
+            group_project: newDocument.target_group_project,
+            created_at: new Date(),
+          });
+        });
+      }
+
+      // 🔹 Duplicate content postings (copy file di Google Drive)
+      const contentPostingsOld = await ContentPostingsModel.find({
+        table_project_id: table._id,
+      }).lean();
+
+      if (contentPostingsOld.length) {
+        for (const content of contentPostingsOld) {
+          try {
+            const originalName = content.file_name_real.replace(
+              /^[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}-/,
+              ""
+            );
+            const timestamp = getTimestampWIB();
+            const newFileName = `${timestamp}-${originalName}`;
+
+            const copiedFile = await drive.files.copy({
+              fileId: content.file_name,
+              requestBody: {
+                name: newFileName,
+                parents: [process.env.FOLDER_ID],
+              },
+              fields: "id, name",
+            });
+
+            newContentPostings.push({
+              ...content,
+              _id: uuidv4(),
+              project_id: projectIdNew,
+              table_project_id: tableIdNew,
+              group_project_id: newDocument.target_group_project_id,
+              group_project: newDocument.target_group_project,
+              file_name: copiedFile.data.id,
+              file_name_real: newFileName,
+              created_at: new Date(),
+              updated_at: new Date(),
+            });
+
+            console.log(
+              `✅ Copied file ${originalName} → ${copiedFile.data.id}`
+            );
+          } catch (error) {
+            console.error(
+              `❌ Error copying file ${content.file_name_real}:`,
+              error.message
+            );
+
+            // 🧹 Rollback manual kalau copy file gagal
+            await ProjectsModel.deleteOne({ _id: projectIdNew });
+            await TableProjectsModel.deleteMany({ project_id: projectIdNew });
+            await SubItemModel.deleteMany({ project_id: projectIdNew });
+            await ContentPostingsModel.deleteMany({ project_id: projectIdNew });
+
+            return res.status(200).json({
+              status: 0,
+              message:
+                "Error copying file on Google Drive. All changes rolled back. Please try again.",
+            });
+          }
+        }
+      }
+    }
+
+    // 🔹 Simpan semua hasil duplikasi
+    await TableProjectsModel.insertMany(newTableProjects);
+    if (newSubItems.length) await SubItemModel.insertMany(newSubItems);
+    if (newContentPostings.length)
+      await ContentPostingsModel.insertMany(newContentPostings);
+
+    // 🔹 Emit hasil duplikasi ke frontend
+    if (req.io) {
+      // Emit table projects
+      req.io
+        .to(projectIdNew)
+        .emit("newTableProject", { projectId: projectIdNew, newTableProjects });
+
+      // Emit subItems dan content per table
+      newTableProjects.forEach((table) => {
+        const subItemsForTable = newSubItems.filter(
+          (sub) => sub.table_project_id === table._id
+        );
+        if (subItemsForTable.length)
+          req.io.emit(`subItemData_${table._id}`, subItemsForTable);
+
+        const contentForTable = newContentPostings.filter(
+          (c) => c.table_project_id === table._id
+        );
+        if (contentForTable.length)
+          req.io.emit(`contentPostingData_${table._id}`, contentForTable);
+      });
+
+      console.log(
+        `🟢 Emitted duplicated project, tables, subItems, and content postings for ${projectIdNew}`
+      );
+    }
+
+    // 🔹 Return sukses
+    return res.status(200).json({
+      status: 1,
+      message:
+        "Duplicated project, table projects, subItems, and contentPostings successfully",
+      projectNew,
+      newTableProjects,
+      newSubItems,
+      newContentPostings,
+    });
+  } catch (error) {
+    console.error("❌ DuplicateProject error:", error);
+    return res.status(200).json({
+      status: 0,
+      message: "Unexpected error duplicating project. Please try again.",
+      error: error.message,
     });
   }
 };
