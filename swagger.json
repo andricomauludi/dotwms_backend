@@ -774,6 +774,47 @@
         }
       }
     },
+    "/workspaces/update-table-project-order": {
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "project_id": {
+                  "example": "any"
+                },
+                "order": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
     "/workspaces/all-table-project/{id}": {
       "get": {
         "description": "",
@@ -1220,6 +1261,47 @@
           },
           "404": {
             "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/workspaces/duplicate-project": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "old_project_id": {
+                  "example": "any"
+                },
+                "target_group_project_id": {
+                  "example": "any"
+                },
+                "target_group_project": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           }
         }
       }

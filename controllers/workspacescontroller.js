@@ -831,15 +831,21 @@ export const getAllTableByProject = async (req, res) => {
   try {
     const projectId = req.params.id;
     const query = { project_id: projectId };
-    const tableproject = await TableProjectsModel.find(query).lean();
 
-    if (!tableproject) {
+    // 🔹 Urutkan berdasarkan created_at ascending (paling lama ke paling baru)
+    // Gunakan .sort({ created_at: 1 }) atau (-1) jika ingin terbaru di atas
+    const tableproject = await TableProjectsModel.find(query)
+      .sort({ created_at: 1 }) // ubah ke -1 kalau mau descending
+      .lean();
+
+    if (!tableproject || tableproject.length === 0) {
       return res.status(404).json({ status: 0, message: `Data not Found` });
     }
 
     const encodeAvatar = async (avatarPath) =>
       base64Encode(avatarPath, "profile_picture");
 
+    // 🔹 Encode avatar secara paralel
     await Promise.all(
       tableproject.map(async (project, index) => {
         tableproject[index]["lead_avatar"] = await encodeAvatar(
@@ -853,14 +859,14 @@ export const getAllTableByProject = async (req, res) => {
 
     // 🔹 Emit hanya ke room sesuai ID project
     req.io.to(projectId).emit("tableProjectData", {
-      projectId, // biar frontend bisa bedain ID-nya
+      projectId,
       tableproject,
     });
-    console.log("tableproject data lewat");
+    console.log(`tableproject data emitted for project ${projectId}`);
 
     return res.status(200).json({
       status: 1,
-      message: `Get All Table Projects`,
+      message: `Get All Table Projects (sorted by created_at)`,
       tableproject,
     });
   } catch (error) {
@@ -1494,6 +1500,45 @@ export const DuplicateProject = async (req, res) => {
     return res.status(200).json({
       status: 0,
       message: "Unexpected error duplicating project. Please try again.",
+      error: error.message,
+    });
+  }
+};
+
+// PATCH /workspaces/update-table-project-order
+export const updateTableProjectOrder = async (req, res) => {
+  try {
+    const { project_id, order } = req.body;
+
+    for (const item of order) {
+      await TableProjectsModel.findByIdAndUpdate(item._id, {
+        created_at: new Date(Date.now() + item.order),
+      });
+    }
+
+    // 🔹 Emit update realtime ke semua client di room project_id
+    const updatedTable = await TableProjectsModel.find({ project_id })
+      .sort({ created_at: 1 })
+      .lean();
+
+    // 🧩 Emit hanya ke room project_id terkait
+    if (req.io) {
+      req.io.emit("newTableProject", {
+        projectId: project_id, // ⚡ harus sama dengan frontend
+        newTableProject: updatedTable,
+      });
+      console.log(`sorted table project updated ${project_id}`);
+    }
+
+    return res.status(200).json({
+      status: 1,
+      message: "Table project order updated successfully",
+      tableproject: updatedTable,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      status: 0,
+      message: "Failed to update order",
       error: error.message,
     });
   }

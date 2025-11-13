@@ -28,6 +28,7 @@ import {
   showContentPosting2,
   showContentPosting3,
   streamVideo,
+  updateTableProjectOrder,
 } from "../controllers/workspacescontroller.js";
 import { myTask, myTaskDone } from "../controllers/mytaskcontroller.js";
 
@@ -101,6 +102,12 @@ router.post(
   multipleUpload,
   verifyToken,
   createTableProject
+);
+router.patch(
+  "/update-table-project-order",
+  multipleUpload,
+  verifyToken,
+  updateTableProjectOrder
 );
 // router.post("/create-table-project", uploads.single('foto'), verifyToken, createTableProject);
 router.get("/all-table-project/:id", verifyToken, getAllTableByProject);
