@@ -7,10 +7,201 @@ import express from "express";
 import fs from "fs";
 import SubItemModel from "../models/subitemmodel.js";
 import GroupProjectModel from "../models/groupprojectmodel.js";
+import { google } from "googleapis"; // Jika Anda menggunakan ES Modules
+import axios from "axios";
+import dotenv from "dotenv";
+import { Readable } from "stream";
+import mongoose from "mongoose";
 
 const app = express();
+dotenv.config();
 
 uuidv4();
+
+const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
+const REDIRECT_URI = process.env.REDIRECT_URI;
+const REFRESH_TOKEN = process.env.REFRESH_TOKEN;
+const FOLDER_ID = process.env.FOLDER_ID; // ID dari folder di Google Drive tempat file akan diupload
+
+const oauth2Client = new google.auth.OAuth2(
+  CLIENT_ID,
+  CLIENT_SECRET,
+  REDIRECT_URI
+);
+
+oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
+
+const drive = google.drive({
+  version: "v3",
+  auth: oauth2Client,
+});
+
+// Function to refresh the access token
+const refreshAccessToken = async () => {
+  try {
+    const response = await axios.post(
+      "https://oauth2.googleapis.com/token",
+      null,
+      {
+        params: {
+          client_id: CLIENT_ID,
+          client_secret: CLIENT_SECRET,
+          refresh_token: REFRESH_TOKEN,
+          grant_type: "refresh_token",
+        },
+      }
+    );
+    const newAccessToken = response.data.access_token;
+    oauth2Client.setCredentials({ access_token: newAccessToken });
+    console.log("Access token refreshed successfully.");
+    return newAccessToken;
+  } catch (error) {
+    console.error("Failed to refresh access token:", error);
+    throw error;
+  }
+};
+
+const getFileFromGoogleDrive = async (fileId) => {
+  try {
+    await refreshAccessToken(); // Ensure the token is fresh before making the request
+    const response = await drive.files.get(
+      {
+        fileId: fileId,
+        alt: "media", // Mendapatkan konten file
+      },
+      { responseType: "stream" }
+    );
+
+    return response.data; // Kembalikan stream data file
+  } catch (error) {
+    console.error("Error retrieving file from Google Drive:", error);
+    throw error;
+  }
+};
+// Fungsi upload file ke Google Drive menggunakan async/await
+const uploadFile = async (filename, file, folderId) => {
+  const bufferStream = new Readable();
+  bufferStream.push(file.buffer);
+  bufferStream.push(null); // Menandakan akhir stream
+  // Debugging: Check if buffer is valid
+  if (Buffer.isBuffer(file.buffer)) {
+    console.log("Buffer is active and valid. Size:", file.buffer.length);
+    console.log("First 20 bytes of buffer:", file.buffer.slice(0, 20));
+  } else {
+    console.error("Invalid buffer:", file.buffer);
+    return null;
+  }
+  try {
+    await refreshAccessToken(); // Ensure the token is fresh before making the request
+    const fileMetadata = {
+      name: filename,
+      parents: [folderId], // Tentukan folder tujuan
+    };
+
+    const media = {
+      mimeType: file.mimeType,
+      body: bufferStream,
+    };
+
+    const response = await drive.files.create({
+      resource: fileMetadata,
+      media: media,
+      fields: "id",
+    });
+
+    return response.data.id;
+  } catch (error) {
+    console.error("Error uploading to Google Drive:", error.message);
+    return null;
+  }
+};
+
+const deleteFileFromGoogleDrive = async (fileId) => {
+  try {
+    await refreshAccessToken();
+    const res = await drive.files.delete({ fileId });
+    console.log(`🗑️ Deleted file ${fileId} from Google Drive`);
+    return res.status === 204;
+  } catch (err) {
+    console.error("❌ Error deleting from Google Drive:", err.message);
+    return false;
+  }
+};
+
+// Endpoint Express.js untuk upload file
+export const uploadHandler = async (req, res) => {
+  let newDocument = req.body;
+
+  const files = req.files["contentposting"];
+  if (!files) {
+    return res.status(400).send("No file uploaded.");
+  }
+
+  const file = files;
+  const filePath = `./assets/contentposting/${file[0].filename}`;
+  // await file.mv(filePath);
+
+  const result = await uploadFile(filePath, file.mimetype, FOLDER_ID);
+
+  if (result) {
+    res.status(200).send({ success: true, fileId: result.id });
+  } else {
+    res.status(500).send("Failed to upload file.");
+  }
+};
+export const readHandler = async (req, res) => {
+  const fileId = "1W4RmTYDPphALod4zAiI4SugOGmGG77Po"; // Ganti dengan ID file yang ingin diambil
+  try {
+    const fileStream = await getFileFromGoogleDrive(fileId);
+    fileStream.pipe(res); // Stream the file directly to the response
+  } catch (error) {
+    res.status(500).send("Error retrieving file");
+  }
+};
+export const uploadHandler2 = async (req, res) => {
+  let newDocument = req.body;
+
+  const file = req.files["contentposting"];
+  if (!file) {
+    return res.status(400).send("No file uploaded.");
+  }
+
+  const files = file;
+  try {
+    const uploadPromises = files.map(async (file) => {
+      // Upload file ke Google Drive
+      const timestampwib = getTimestampWIB();
+      const filename = `${timestampwib}` + "-" + item.originalname;
+
+      return await uploadFile(filename, file, FOLDER_ID);
+    });
+
+    // Tunggu semua file selesai diupload
+    const uploadedFiles = await Promise.all(uploadPromises);
+    console.log("Uploaded files:", await uploadedFiles); // Log seluruh hasil
+
+    // Ambil ID file yang berhasil diupload
+    const fileIds = uploadedFiles.filter((id) => id !== null); // Filter out null IDs
+
+    console.log("File IDs:", fileIds); // Log file IDs yang terfilter
+
+    // Simpan ID file ke database atau lakukan apa pun yang diperlukan
+    // Misalnya, bisa menyimpan fileIds ke dalam newDocument
+    newDocument.fileIds = fileIds; // Menyimpan array ID ke dalam newDocument
+
+    // Simpan newDocument ke database (misalnya menggunakan Mongoose)
+    // await DocumentModel.create(newDocument); // Ganti dengan model dan method yang sesuai
+
+    res.send({
+      message: "Files uploaded to Google Drive successfully.",
+      fileIds,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Failed to upload files to Google Drive.");
+  }
+};
 
 export const createGroupProject = async (req, res) => {
   // Create a new blog post object
@@ -39,29 +230,38 @@ export const createGroupProject = async (req, res) => {
 };
 
 export const createProject = async (req, res) => {
-  // Create a new blog post object
-  let newDocument = req.body;
-  const projectid = uuidv4(); //generate user id
-  newDocument._id = projectid;
-  newDocument.created_at = new Date();
-  const result = await ProjectsModel.create(newDocument);
+  try {
+    let newDocument = req.body;
+    const projectid = uuidv4();
+    newDocument._id = projectid;
+    newDocument.created_at = new Date();
 
-  if (!result)
-    res
-      .send({
+    const result = await ProjectsModel.create(newDocument);
+
+    if (!result) {
+      return res.status(404).send({
         status: 0,
-        message: `Cannot create data in database`,
-        result,
-      })
-      .status(404);
-  else
-    res
-      .send({
-        status: 1,
-        message: "Project created",
-        result,
-      })
-      .status(201);
+        message: "Cannot create data in database",
+      });
+    }
+
+    // ✅ Emit hanya ke room sesuai group_project_id
+    console.log("🟢 Emitting to room:", result.group_project_id);
+    req.io.to(result.group_project_id).emit("newProject", result);
+
+    return res.status(201).send({
+      status: 1,
+      message: "Project created",
+      result,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send({
+      status: -1,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
 };
 
 export const streamVideo = async (req, res) => {
@@ -161,170 +361,231 @@ async function createUpdateContentPosting(
   //   return hasilbener;
   // }
 }
+function getTimestampWIB() {
+  const date = new Date();
+
+  // Konversi ke WIB (UTC +7)
+  const wibTime = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+
+  const year = wibTime.getUTCFullYear();
+  const month = String(wibTime.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(wibTime.getUTCDate()).padStart(2, "0");
+  const hours = String(wibTime.getUTCHours()).padStart(2, "0");
+  const minutes = String(wibTime.getUTCMinutes()).padStart(2, "0");
+  const seconds = String(wibTime.getUTCSeconds()).padStart(2, "0");
+
+  // Format: YYYY-MM-DD_HH-mm-ss
+  return `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
+}
+async function createUpdateContentPosting2(
+  newDocument,
+  projectid,
+  contentposting,
+  res
+) {
+  //MASUK CREATE
+
+  // if (!tableproject) {
+  let itemsUpload = contentposting.map(async (item) => {
+    const timestampwib = getTimestampWIB();
+    const filename = `${timestampwib}` + "-" + item.originalname;
+    const id_file = await uploadFile(filename, item, FOLDER_ID);
+    return {
+      _id: uuidv4(),
+      project_id: newDocument.project_id,
+      project_name: newDocument.project_name,
+      table_project_id: projectid,
+      table_project_name: newDocument.item,
+      file_name: id_file,
+      file_name_real: filename,
+      file_type: item.mimetype,
+      created_at: new Date(),
+      updated_at: new Date(),
+      created_by: newDocument.created_by,
+      updated_by: newDocument.updated_by,
+    };
+  });
+
+  const uploadedFiles = await Promise.all(itemsUpload);
+
+  const result = await ContentPostingsModel.insertMany(await uploadedFiles);
+  if (!result) {
+    const hasilgakbener = 0;
+    return hasilgakbener;
+  }
+  const hasilbener = 1;
+  return hasilbener;
+}
 export const deleteContentPosting = async (req, res) => {
-  const ids = req.body.id;
+  try {
+    const ids = req.body.id;
 
-  const contentposting = await ContentPostingsModel.find(
-    {
-      _id: {
-        $in: ids,
-      },
-    },    
-  ).select({ "file_name": 1, "_id": 0});
+    // Ambil data file dari DB
+    const contents = await ContentPostingsModel.find({
+      _id: { $in: ids },
+    }).select({ file_name: 1 });
 
-  for (let i = 0; i < contentposting.length; i++) {
-    const path = "./assets/contentposting/" + contentposting[i].file_name;
-    fs.unlink(path, (err) => {
-      if (err) {
-        res
-          .send({
-            status: -1,
-            message: "Error while deleting file on directory",
-            err,
-          })
-          .status(401);
-      }
+    // Jalankan penghapusan paralel untuk efisiensi
+    await Promise.all(
+      contents.map(async (item) => {
+        // 1️⃣ Hapus file lokal
+        if (item.file_name) {
+          const localPath = `./assets/contentposting/${item.file_name}`;
+          try {
+            await fs.unlink(localPath);
+            console.log(`🗑️ Deleted local file: ${item.file_name}`);
+          } catch (err) {
+            console.warn(
+              `⚠️ File ${item.file_name} not found or already deleted.`
+            );
+          }
+        }
+
+        // 2️⃣ Hapus file dari Google Drive
+        console.log(item.file_name);
+        if (item.file_name) {
+          await deleteFileFromGoogleDrive(item.file_name);
+        }
+      })
+    );
+
+    // 3️⃣ Hapus data dari MongoDB
+    const result = await ContentPostingsModel.deleteMany({ _id: { $in: ids } });
+
+    if (result.deletedCount > 0) {
+      return res.status(200).json({
+        status: 1,
+        message: "✅ Content Posting deleted successfully (local + Drive + DB)",
+      });
+    } else {
+      return res.status(200).json({
+        status: 1,
+        message: "No content found to delete",
+      });
+    }
+  } catch (err) {
+    console.error("❌ Error in deleteContentPosting:", err);
+    return res.status(500).json({
+      status: -1,
+      message: "Error while deleting content posting",
+      error: err.message,
     });
   }
-
-  const result = await ContentPostingsModel.deleteMany({
-    _id: { $in: ids }, //bulking delete
-  });
-  if (result) {
-    return res
-      .send({
-        status: 1,
-        message: "Content Posting deleted successfully",
-      })
-      .status(200);
-  }
-  return res
-    .send({
-      status: 1,
-      message: "Failed while deleting data on database",
-    })
-    .status(400);
-
-  // var idList = ["559e0dbd045ac712fa1f19fa","559e0dbe045ac712fa1f19fb"];
-
-  // var pincode = mongoose.model('pincode');
-
-  // pincode.find({ "city_id": { "$in": idList } },function(err,docs) {
-  //    // do something here
-  // });
-
-  // try {
-  //   const query = { file_name: req.params.file_name };
-  //   let result = await UsersModel.deleteOne(query);
-
-  //   if (!result)
-  //     return res.status(404).json({ status: 0, message: `Data not Found` });
-
-  //   return res.status(200).json({
-  //     status: 1,
-  //     message: `User with id ` + req.params.id + ` is deleted`,
-  //   });
-  // } catch (error) {
-  //   return res
-  //     .status(400)
-  //     .json({ status: -1, message: `Error on delete user` });
-  // }
 };
 export const createTableProject = async (req, res) => {
-  // Create a new blog post object
-  let newDocument = req.body;
+  try {
+    let newDocument = req.body;
+    const projectId = newDocument.project_id; // pastikan frontend kirim project_id
+    const tableId = uuidv4();
 
-  const projectid = uuidv4(); //generate user id
-  newDocument._id = projectid;
-  newDocument.created_at = new Date();
-  // foto = req.file
-  // const contenttext = req.files["contenttext"];
-  const contentposting = req.files["contentposting"];
-  // const postingcaption = req.files["postingcaption"];
-  // console.log(contentposting[0].filename)
-  // throw new Error("my error message");
-  // throw new Error;
-  if (contentposting) {
-    if (contentposting.length > 1) {
-      for (let i = 0; i < contentposting.length; i++) {
-        newDocument.contentposting = contentposting[i].filename;
+    newDocument._id = tableId;
+    newDocument.created_at = new Date();
+
+    const contentposting = req.files?.["contentposting"];
+
+    // 🔹 Upload file kalau ada
+    if (contentposting && contentposting.length > 0) {
+      if (contentposting.length > 1) {
+        for (let i = 0; i < contentposting.length; i++) {
+          newDocument.contentposting = contentposting[i].filename;
+        }
+      } else {
+        newDocument.contentposting = contentposting[0].filename;
       }
-    } else {
-      // if (contentposting) {
-      newDocument.contentposting = contentposting[0].filename;
-      // }
-    }
-    const resultContentPosting = await createUpdateContentPosting(
-      newDocument,
-      projectid,
-      contentposting
-    );
-    if (resultContentPosting == 0) {
-      res
-        .send({
+
+      const resultContentPosting = await createUpdateContentPosting2(
+        newDocument,
+        tableId,
+        contentposting
+      );
+
+      if (resultContentPosting === 0) {
+        return res.status(400).send({
           status: 0,
-          message: `Error while upload file, please try again`,
-          result,
-        })
-        .status(404);
+          message: "Error while uploading file, please try again",
+        });
+      }
     }
-  }
 
-  // if (contenttext) newDocument.contenttext = contenttext[0].filename;
-  // if (postingcaption) newDocument.postingcaption = postingcaption[0].filename;
-
-  // Orders.insertMany(items)
-  //   .then(() => {
-  //     console.log("Orders Added!");
-  //     res.status(200).json("Order Added!");
-  //   })
-  //   .catch(err => res.status(400).json("Error: " + err));
-
-  const result = await TableProjectsModel.create(newDocument);
-
-  if (!result)
-    res
-      .send({
+    // 🔹 Simpan ke database
+    const result = await TableProjectsModel.create(newDocument);
+    if (!result) {
+      return res.status(400).send({
         status: 0,
-        message: `Cannot create data in database`,
-        result,
-      })
-      .status(404);
-  else
-    res
-      .send({
-        status: 1,
-        message: "Table Project created",
-        result,
-      })
-      .status(201);
+        message: "Cannot create data in the database",
+      });
+    }
+
+    // 🔹 Encode avatar (biar konsisten kayak endpoint lain)
+    newDocument.lead_avatar = base64Encode(
+      newDocument.lead_avatar,
+      "profile_picture"
+    );
+    newDocument.updated_by_avatar = base64Encode(
+      newDocument.updated_by_avatar,
+      "profile_picture"
+    );
+
+    // 🧩 Emit hanya ke room project_id terkait
+    if (req.io) {
+      req.io.emit("newTableProject", {
+        projectId, // penting buat filter di frontend
+        newTableProject: newDocument,
+      });
+      console.log(
+        `New table project emitted globally for project ${projectId}`
+      );
+    }
+
+    return res.status(201).send({
+      status: 1,
+      message: "Table Project created",
+      result,
+    });
+  } catch (error) {
+    console.error("Error in createTableProject:", error);
+    return res.status(500).send({
+      status: 0,
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
 };
+
 export const createSubItem = async (req, res) => {
-  // Create a new blog post object
   let newDocument = req.body;
-  const projectid = uuidv4(); //generate user id
+  const projectid = uuidv4(); // Generate a unique ID for the sub-item
   newDocument._id = projectid;
   newDocument.created_at = new Date();
-  // foto = req.file
 
   const result = await SubItemModel.create(newDocument);
 
-  if (!result)
-    res
-      .send({
-        status: 0,
-        message: `Cannot create data in database`,
-        result,
-      })
-      .status(404);
-  else
-    res
-      .send({
-        status: 1,
-        message: "Sub Item created",
-        result,
-      })
-      .status(201);
+  if (!result) {
+    res.status(404).send({
+      status: 0,
+      message: `Cannot create data in database`,
+      result,
+    });
+  } else {
+    result.avatar = base64Encode(result.avatar, "profile_picture");
+
+    // Emit only to the clients listening for this specific `table_project_id`
+    console.log(
+      "🟢 Emitting newSubItem for table:",
+      newDocument.table_project_id
+    );
+
+    req.io.emit("newSubItem", {
+      projectId: newDocument.table_project_id,
+      newSubItem: newDocument,
+    });
+
+    res.status(201).send({
+      status: 1,
+      message: "Sub Item created",
+      result,
+    });
+  }
 };
 
 export const getAllGroupProject = async (req, res) => {
@@ -364,12 +625,11 @@ export const getAllProject = async (req, res) => {
 export const getAllSubItemByTable = async (req, res) => {
   try {
     let query = { table_project_id: req.params.id };
-    const subItem = await SubItemModel.find(query)
-      .select
-      // "-_id"
-      ();
-    if (!subItem)
+    const subItem = await SubItemModel.find(query);
+
+    if (!subItem) {
       return res.status(404).json({ status: 0, message: `Data not Found` });
+    }
 
     for (let i = 0; i < subItem.length; i++) {
       const contentsavatar = base64Encode(
@@ -378,6 +638,9 @@ export const getAllSubItemByTable = async (req, res) => {
       );
       subItem[i]["avatar"] = await contentsavatar;
     }
+
+    // Emit only to the clients listening for this specific `table_project_id`
+    req.io.emit(`subItemData_${req.params.id}`, subItem);
 
     return res
       .status(200)
@@ -430,7 +693,10 @@ export const showContentPosting = async (req, res) => {
       body.file_type == "image/jpeg" ||
       body.file_type == "image/jpg"
     ) {
-      const contentfile = base64Encode(body.file_name, "contentposting");
+      const contentfile = base64EncodeContentPosting(
+        body.file_name,
+        "contentposting"
+      );
 
       return res
         .status(200)
@@ -448,6 +714,73 @@ export const showContentPosting = async (req, res) => {
     });
   }
 };
+export const showContentPosting2 = async (req, res) => {
+  const { file_name, file_type } = req.body;
+
+  try {
+    const fileStream = await getFileFromGoogleDrive(file_name);
+
+    // Atur header sesuai tipe file
+    if (file_type === "video/mp4") {
+      res.setHeader("Content-Type", "video/mp4");
+      res.setHeader("Content-Disposition", `inline; filename="${file_name}"`);
+    } else if (file_type.startsWith("image/")) {
+      res.setHeader("Content-Type", file_type);
+      res.setHeader("Content-Disposition", `inline; filename="${file_name}"`);
+    } else {
+      res.setHeader("Content-Type", "application/octet-stream");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${file_name}"`
+      );
+    }
+
+    fileStream.pipe(res);
+  } catch (error) {
+    console.error("Error retrieving file:", error);
+    res.status(500).send("Error retrieving file");
+  }
+};
+
+export const showContentPosting3 = async (req, res) => {
+  const body = req.body; // body contains file_name and file_type
+  try {
+    const { file_name } = body;
+
+    // Generate a Google Drive direct access URL
+    const fileUrl = `https://drive.google.com/file/d/${file_name}/view`;
+
+    // Return HTML with a link to open the file directly on Google Drive
+    return res
+      .status(200)
+      .json({ status: 1, message: `showing url file`, fileUrl });
+  } catch (error) {
+    res.status(500).send("Error retrieving file");
+  }
+};
+export const showContentPostingHtml = async (req, res) => {
+  const body = req.body; // body contains file_name and file_type
+  try {
+    const { file_name } = body;
+
+    // Generate a Google Drive direct access URL
+    const fileUrl = `https://drive.google.com/file/d/${file_name}/view`;
+
+    // Return HTML with a link to open the file directly on Google Drive
+    res.send(`
+      <html>
+        <body style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column;">
+          <a href="${fileUrl}" target="_blank" style="font-size: 18px; text-decoration: none; color: blue;">
+            Click here to view the file on Google Drive
+          </a>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    res.status(500).send("Error retrieving file");
+  }
+};
+
 export const getContentPostingByTable = async (req, res) => {
   try {
     let query = { table_project_id: req.params.id };
@@ -456,21 +789,6 @@ export const getContentPostingByTable = async (req, res) => {
       .lean();
     if (!contentPosting)
       return res.status(404).json({ status: 0, message: `Data not Found` });
-
-    // for (let i = 0; i < contentPosting.length; i++) {
-    // const contentfile = base64Encode(
-    //   contentPosting[i]["file_name"],
-    //   "contentPosting"
-    // );
-    // contentPosting[i]["file"] = await contentfile;
-    // if (contentPosting[i]['file_type']=="video/mp4") {
-
-    // }
-    // const contents = fs.readFileSync(
-    //   `./assets/` + "contentPosting" + `/` + contentPosting[i]["file_name"]
-    // );
-    // console.log(contentPosting[i]["file_name"]);
-    // }
 
     return res
       .status(200)
@@ -489,16 +807,20 @@ export const getProjectByGroupProject = async (req, res) => {
     let query = { group_project_id: req.params.id };
     const groupproject = await ProjectsModel.find(query).select();
 
-    if (!groupproject)
+    if (!groupproject) {
       return res.status(404).json({ status: 0, message: `Data not Found` });
+    }
 
-    return res.status(200).json({
+    // Emit event to all clients
+    req.io.emit("groupProjectData", groupproject);
+
+    res.status(200).json({
       status: 1,
       message: `Get All Project by Group Project`,
       groupproject,
     });
   } catch (error) {
-    return res.status(400).json({
+    res.status(400).json({
       status: 0,
       message: `Error on getting all project by group project`,
       error,
@@ -506,49 +828,56 @@ export const getProjectByGroupProject = async (req, res) => {
   }
 };
 export const getAllTableByProject = async (req, res) => {
-  //cari dari project id
   try {
-    let query = { project_id: req.params.id };
-    const tableproject = await TableProjectsModel.find(query)
-      .select
-      // "-_id"
-      ()
-      .lean();
-    if (!tableproject)
-      return res.status(404).json({ status: 0, message: `Data not Found` });
+    const projectId = req.params.id;
+    const query = { project_id: projectId };
 
-    for (let i = 0; i < tableproject.length; i++) {
-      // const contents = base64Encode(tableproject[i]["contenttext"],'contenttext');
-      // tableproject[i]["contenttext"] = await contents;
-      const contentsavatar = base64Encode(
-        tableproject[i]["lead_avatar"],
-        "profile_picture"
-      );
-      tableproject[i]["lead_avatar"] = await contentsavatar;
-      const contentsavatarupdatedby = base64Encode(
-        tableproject[i]["updated_by_avatar"],
-        "profile_picture"
-      );
-      tableproject[i]["updated_by_avatar"] = await contentsavatarupdatedby;
-      // tableproject[i]["contentpostingname"] = tableproject[i]["contentposting"];
-      // const contentposting = base64Encode(
-      //   tableproject[i]["contentposting"],
-      //   "contentposting"
-      // );
-      // tableproject[i]["contentposting"] = await contentposting;
+    // 🔹 Urutkan berdasarkan created_at ascending (paling lama ke paling baru)
+    // Gunakan .sort({ created_at: 1 }) atau (-1) jika ingin terbaru di atas
+    const tableproject = await TableProjectsModel.find(query)
+      .sort({ created_at: 1 }) // ubah ke -1 kalau mau descending
+      .lean();
+
+    if (!tableproject || tableproject.length === 0) {
+      return res.status(404).json({ status: 0, message: `Data not Found` });
     }
 
-    return res
-      .status(200)
-      .json({ status: 1, message: `Get All Table Projects`, tableproject });
+    const encodeAvatar = async (avatarPath) =>
+      base64Encode(avatarPath, "profile_picture");
+
+    // 🔹 Encode avatar secara paralel
+    await Promise.all(
+      tableproject.map(async (project, index) => {
+        tableproject[index]["lead_avatar"] = await encodeAvatar(
+          project["lead_avatar"]
+        );
+        tableproject[index]["updated_by_avatar"] = await encodeAvatar(
+          project["updated_by_avatar"]
+        );
+      })
+    );
+
+    // 🔹 Emit hanya ke room sesuai ID project
+    req.io.to(projectId).emit("tableProjectData", {
+      projectId,
+      tableproject,
+    });
+    console.log(`tableproject data emitted for project ${projectId}`);
+
+    return res.status(200).json({
+      status: 1,
+      message: `Get All Table Projects (sorted by created_at)`,
+      tableproject,
+    });
   } catch (error) {
     return res.status(400).json({
       status: 0,
       message: `Error on getting all table projects`,
-      error,
+      error: error.message,
     });
   }
 };
+
 export const detailTableProject = async (req, res) => {
   let query = { _id: req.params.id };
   try {
@@ -587,6 +916,20 @@ export const detailTableProject = async (req, res) => {
 };
 
 function base64Encode(inputFileName, content) {
+  // if (!inputFileName == "") {
+  //   const contents = fs.readFileSync(
+  //     `./assets/` + content + `/` + inputFileName,
+  //     {
+  //       encoding: "base64",
+  //     }
+  //   );
+  //   return contents;
+  // }
+  const contents = "";
+
+  return contents;
+}
+function base64EncodeContentPosting(inputFileName, content) {
   if (!inputFileName == "") {
     const contents = fs.readFileSync(
       `./assets/` + content + `/` + inputFileName,
@@ -663,22 +1006,34 @@ export const deleteUser = async (req, res) => {
 };
 export const deleteTableProject = async (req, res) => {
   try {
-    const query = { _id: req.params.id };
-    let result = await TableProjectsModel.deleteOne(query);
+    const projectId = req.params.id;
 
-    if (!result)
-      return res.status(404).json({ status: 0, message: `Data not Found` });
+    // Cari dulu data sebelum dihapus biar bisa di-broadcast
+    const deletedProject = await TableProjectsModel.findById(req.params.id);
+    if (!deletedProject) {
+      return res.status(404).json({ status: 0, message: "Data not found" });
+    }
+
+    await TableProjectsModel.deleteOne({ _id: req.params.id });
+
+    req.io.emit("tableProjectDeleted", {
+      projectId: deletedProject.project_id, // ambil project_id dari record
+      deletedProject,
+    });
 
     return res.status(200).json({
       status: 1,
-      message: `Table Project with id ` + req.params.id + ` is deleted`,
+      message: `Table Project with id ${req.params.id} is deleted`,
     });
   } catch (error) {
-    return res
-      .status(400)
-      .json({ status: -1, message: `Error on delete Table Project` });
+    console.error("Error in deleteTableProject:", error);
+    return res.status(400).json({
+      status: -1,
+      message: `Error on delete Table Project`,
+    });
   }
 };
+
 export const deleteGroupProject = async (req, res) => {
   try {
     const query = { _id: req.params.id };
@@ -702,30 +1057,44 @@ export const deleteProject = async (req, res) => {
     const query = { _id: req.params.id };
     let result = await ProjectsModel.deleteOne(query);
 
-    if (!result)
+    if (!result) {
       return res.status(404).json({ status: 0, message: `Data not Found` });
+    }
+
+    // Emit a Socket.IO event to notify clients that a project was deleted
+    req.io.emit("projectDeleted", { projectId: req.params.id });
 
     return res.status(200).json({
       status: 1,
       message: `Project with id ` + req.params.id + ` is deleted`,
     });
   } catch (error) {
-    return res
-      .status(400)
-      .json({ status: -1, message: `Error on delete Project` });
+    return res.status(400).json({
+      status: -1,
+      message: `Error on delete Project`,
+      error,
+    });
   }
 };
 export const deleteSubItem = async (req, res) => {
   try {
-    const query = { _id: req.params.id };
-    let result = await SubItemModel.deleteOne(query);
-
-    if (!result)
+    // Cari dulu subitem yang akan dihapus
+    const deletedSubItem = await SubItemModel.findById(req.params.id);
+    if (!deletedSubItem) {
       return res.status(404).json({ status: 0, message: `Data not Found` });
+    }
+
+    await SubItemModel.deleteOne({ _id: req.params.id });
+
+    // Emit event sesuai frontend
+    req.io.emit("subItemDeleted", {
+      projectId: deletedSubItem.table_project_id, // pastikan ini cocok dengan frontend
+      deletedSubItem,
+    });
 
     return res.status(200).json({
       status: 1,
-      message: `Sub Item with id ` + req.params.id + ` is deleted`,
+      message: `Sub Item with id ${req.params.id} is deleted`,
     });
   } catch (error) {
     return res
@@ -783,101 +1152,394 @@ export const editGroupProject = async (req, res) => {
       .status(200);
 };
 export const editProject = async (req, res) => {
-  let newDocument = req.body;
-  const query = { _id: newDocument._id }; //pake ini kalo idnya pake uuid
+  try {
+    const newDocument = req.body;
+    const query = { _id: newDocument._id }; // using the ID to find the document
 
-  const updates = {
-    $set: newDocument,
-  };
-  let result = await ProjectsModel.findByIdAndUpdate(query, updates);
-  if (!result)
-    res
-      .send({
+    const updates = {
+      $set: newDocument,
+    };
+
+    const result = await ProjectsModel.findByIdAndUpdate(query, updates, {
+      new: true,
+    });
+
+    if (!result) {
+      res.status(404).send({
         status: 0,
-        message: `data not found`,
-      })
-      .status(404);
-  else
-    res
-      .send({
+        message: `Data not found`,
+      });
+    } else {
+      // Emit the updated project to all connected clients
+      req.io.emit("projectEdited", result);
+
+      res.status(200).send({
         status: 1,
-        message: `Project with id ${req.params.id} successfully updated`,
+        message: `Project with id ${newDocument._id} successfully updated`,
         result,
-      })
-      .status(200);
+      });
+    }
+  } catch (error) {
+    res.status(400).send({
+      status: -1,
+      message: `Error on updating Project`,
+      error,
+    });
+  }
 };
 export const editSubItem = async (req, res) => {
-  let newDocument = req.body;
-  const query = { _id: newDocument._id }; //pake ini kalo idnya pake uuid
+  try {
+    const newDocument = req.body;
+    const query = { _id: newDocument._id };
 
-  const updates = {
-    $set: newDocument,
-  };
-  let result = await SubItemModel.findByIdAndUpdate(query, updates);
-  if (!result)
-    res
-      .send({
-        status: 0,
-        message: `data not found`,
-      })
-      .status(404);
-  else
-    res
-      .send({
-        status: 1,
-        message: `Sub Item with id ${req.params.id} successfully updated`,
-        result,
-      })
-      .status(200);
-};
-export const editTableProject = async (req, res) => {
-  let newDocument = req.body;
-  const query = { _id: newDocument._id }; //pake ini kalo idnya pake uuid
-
-  const contentposting = req.files["contentposting"];
-
-  if (contentposting) {
-    if (contentposting.length > 1) {
-      for (let i = 0; i < contentposting.length; i++) {
-        newDocument.contentposting = contentposting[i].filename;
+    const updates = { $set: newDocument };
+    const updatedSubItem = await SubItemModel.findByIdAndUpdate(
+      query,
+      updates,
+      {
+        new: true,
       }
-    } else {
-      // if (contentposting) {
-      newDocument.contentposting = contentposting[0].filename;
-      // }
-    }
-    const resultContentPosting = await createUpdateContentPosting(
-      newDocument,
-      newDocument._id,
-      contentposting
     );
-    if (resultContentPosting == 0) {
-      res
-        .send({
-          status: 0,
-          message: `Error while upload file, please try again`,
-          result,
-        })
-        .status(401);
-    }
-  }
-  const updates = {
-    $set: newDocument,
-  };
-  let result = await TableProjectsModel.findByIdAndUpdate(query, updates);
-  if (!result)
-    res
-      .send({
+
+    if (!updatedSubItem) {
+      return res.status(404).send({
         status: 0,
         message: `data not found`,
-      })
-      .status(404);
-  else
-    res
-      .send({
-        status: 1,
-        message: `Table Project with id ${newDocument._id} successfully updated`,
-        result,
-      })
-      .status(200);
+      });
+    }
+
+    updatedSubItem.avatar = base64Encode(
+      updatedSubItem.avatar,
+      "profile_picture"
+    );
+
+    // Emit event sesuai frontend
+    req.io.emit("subItemEdited", {
+      projectId: updatedSubItem.table_project_id, // harus sama fieldnya dengan frontend filter
+      updatedSubItem,
+    });
+
+    return res.status(200).send({
+      status: 1,
+      message: `Sub Item with id ${updatedSubItem._id} successfully updated`,
+      result: updatedSubItem,
+    });
+  } catch (error) {
+    return res.status(400).send({
+      status: -1,
+      message: `Error on edit Sub Item`,
+    });
+  }
+};
+
+export const editTableProject = async (req, res) => {
+  try {
+    let newDocument = req.body;
+    const query = { _id: newDocument._id }; // pakai uuid
+
+    const contentposting = req.files?.["contentposting"];
+
+    if (contentposting) {
+      if (contentposting.length > 1) {
+        for (let i = 0; i < contentposting.length; i++) {
+          newDocument.contentposting = contentposting[i].filename;
+        }
+      } else {
+        newDocument.contentposting = contentposting[0].filename;
+      }
+
+      const resultContentPosting = await createUpdateContentPosting2(
+        newDocument,
+        newDocument._id,
+        contentposting
+      );
+
+      if (resultContentPosting === 0) {
+        return res.status(400).send({
+          status: 0,
+          message: `Error while uploading file, please try again`,
+        });
+      }
+    }
+
+    const updates = { $set: newDocument };
+
+    let result = await TableProjectsModel.findByIdAndUpdate(query, updates, {
+      new: true,
+    });
+
+    if (!result) {
+      return res.status(404).send({
+        status: 0,
+        message: `Data not found`,
+      });
+    }
+
+    // Encode avatar
+    result.lead_avatar = base64Encode(result.lead_avatar, "profile_picture");
+    result.updated_by_avatar = base64Encode(
+      result.updated_by_avatar,
+      "profile_picture"
+    );
+
+    // Emit ke semua client
+    const projectId = newDocument.project_id; // ambil project_id dari dokumen
+
+    req.io.emit("tableProjectEdited", {
+      projectId, // kirim project_id yang benar
+      updatedProject: result,
+    });
+
+    res.status(200).send({
+      status: 1,
+      message: `Table Project with id ${newDocument._id} successfully updated`,
+      result,
+    });
+  } catch (error) {
+    console.error("Error in editTableProject:", error);
+    return res.status(500).send({
+      status: -1,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const DuplicateProject = async (req, res) => {
+  try {
+    const newDocument = req.body;
+
+    // 🔹 Ambil project lama
+    const projectOld = await ProjectsModel.findOne({
+      _id: newDocument.old_project_id,
+    });
+
+    if (!projectOld) {
+      return res.status(200).json({
+        status: 0,
+        message: "Old project not found",
+      });
+    }
+
+    // 🔹 Duplicate project baru
+    const projectIdNew = uuidv4();
+    const projectNewData = {
+      ...projectOld.toObject(),
+      _id: projectIdNew,
+      group_project_id: newDocument.target_group_project_id,
+      group_project: newDocument.target_group_project,
+      created_at: new Date(),
+    };
+
+    const projectNew = await ProjectsModel.create(projectNewData);
+
+    // 🔹 Emit new project ke group target
+    if (req.io) {
+      req.io.to(projectNew.group_project_id).emit("newProject", projectNew);
+      console.log(
+        `🟢 Emitting new project to group: ${projectNew.group_project_id}`
+      );
+    }
+
+    // 🔹 Ambil semua table project lama
+    const tableProjectsOld = await TableProjectsModel.find({
+      project_id: newDocument.old_project_id,
+    }).lean();
+
+    if (!tableProjectsOld.length) {
+      return res.status(200).json({
+        status: 0,
+        message: "No table projects found for this project",
+      });
+    }
+
+    const newTableProjects = [];
+    const newSubItems = [];
+    const newContentPostings = [];
+
+    // 🔹 Loop semua table project lama
+    for (const table of tableProjectsOld) {
+      const tableIdNew = uuidv4();
+
+      // Duplicate table project
+      const tableNew = {
+        ...table,
+        _id: tableIdNew,
+        project_id: projectIdNew,
+        group_project_id: newDocument.target_group_project_id,
+        group_project: newDocument.target_group_project,
+        created_at: new Date(),
+      };
+      newTableProjects.push(tableNew);
+
+      // 🔹 Duplicate subItems
+      const subItemsOld = await SubItemModel.find({
+        table_project_id: table._id,
+      }).lean();
+
+      if (subItemsOld.length) {
+        subItemsOld.forEach((sub) => {
+          newSubItems.push({
+            ...sub,
+            _id: uuidv4(),
+            table_project_id: tableIdNew,
+            project_id: projectIdNew,
+            group_project_id: newDocument.target_group_project_id,
+            group_project: newDocument.target_group_project,
+            created_at: new Date(),
+          });
+        });
+      }
+
+      // 🔹 Duplicate content postings (copy file di Google Drive)
+      const contentPostingsOld = await ContentPostingsModel.find({
+        table_project_id: table._id,
+      }).lean();
+
+      if (contentPostingsOld.length) {
+        for (const content of contentPostingsOld) {
+          try {
+            const originalName = content.file_name_real.replace(
+              /^[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}-/,
+              ""
+            );
+            const timestamp = getTimestampWIB();
+            const newFileName = `${timestamp}-${originalName}`;
+
+            const copiedFile = await drive.files.copy({
+              fileId: content.file_name,
+              requestBody: {
+                name: newFileName,
+                parents: [process.env.FOLDER_ID],
+              },
+              fields: "id, name",
+            });
+
+            newContentPostings.push({
+              ...content,
+              _id: uuidv4(),
+              project_id: projectIdNew,
+              table_project_id: tableIdNew,
+              group_project_id: newDocument.target_group_project_id,
+              group_project: newDocument.target_group_project,
+              file_name: copiedFile.data.id,
+              file_name_real: newFileName,
+              created_at: new Date(),
+              updated_at: new Date(),
+            });
+
+            console.log(
+              `✅ Copied file ${originalName} → ${copiedFile.data.id}`
+            );
+          } catch (error) {
+            console.error(
+              `❌ Error copying file ${content.file_name_real}:`,
+              error.message
+            );
+
+            // 🧹 Rollback manual kalau copy file gagal
+            await ProjectsModel.deleteOne({ _id: projectIdNew });
+            await TableProjectsModel.deleteMany({ project_id: projectIdNew });
+            await SubItemModel.deleteMany({ project_id: projectIdNew });
+            await ContentPostingsModel.deleteMany({ project_id: projectIdNew });
+
+            return res.status(200).json({
+              status: 0,
+              message:
+                "Error copying file on Google Drive. All changes rolled back. Please try again.",
+            });
+          }
+        }
+      }
+    }
+
+    // 🔹 Simpan semua hasil duplikasi
+    await TableProjectsModel.insertMany(newTableProjects);
+    if (newSubItems.length) await SubItemModel.insertMany(newSubItems);
+    if (newContentPostings.length)
+      await ContentPostingsModel.insertMany(newContentPostings);
+
+    // 🔹 Emit hasil duplikasi ke frontend
+    if (req.io) {
+      // Emit table projects
+      req.io
+        .to(projectIdNew)
+        .emit("newTableProject", { projectId: projectIdNew, newTableProjects });
+
+      // Emit subItems dan content per table
+      newTableProjects.forEach((table) => {
+        const subItemsForTable = newSubItems.filter(
+          (sub) => sub.table_project_id === table._id
+        );
+        if (subItemsForTable.length)
+          req.io.emit(`subItemData_${table._id}`, subItemsForTable);
+
+        const contentForTable = newContentPostings.filter(
+          (c) => c.table_project_id === table._id
+        );
+        if (contentForTable.length)
+          req.io.emit(`contentPostingData_${table._id}`, contentForTable);
+      });
+
+      console.log(
+        `🟢 Emitted duplicated project, tables, subItems, and content postings for ${projectIdNew}`
+      );
+    }
+
+    // 🔹 Return sukses
+    return res.status(200).json({
+      status: 1,
+      message:
+        "Duplicated project, table projects, subItems, and contentPostings successfully",
+      projectNew,
+      newTableProjects,
+      newSubItems,
+      newContentPostings,
+    });
+  } catch (error) {
+    console.error("❌ DuplicateProject error:", error);
+    return res.status(200).json({
+      status: 0,
+      message: "Unexpected error duplicating project. Please try again.",
+      error: error.message,
+    });
+  }
+};
+
+// PATCH /workspaces/update-table-project-order
+export const updateTableProjectOrder = async (req, res) => {
+  try {
+    const { project_id, order } = req.body;
+
+    for (const item of order) {
+      await TableProjectsModel.findByIdAndUpdate(item._id, {
+        created_at: new Date(Date.now() + item.order),
+      });
+    }
+
+    // 🔹 Emit update realtime ke semua client di room project_id
+    const updatedTable = await TableProjectsModel.find({ project_id })
+      .sort({ created_at: 1 })
+      .lean();
+
+    // 🧩 Emit hanya ke room project_id terkait
+    if (req.io) {
+      req.io.emit("newTableProject", {
+        projectId: project_id, // ⚡ harus sama dengan frontend
+        newTableProject: updatedTable,
+      });
+      console.log(`sorted table project updated ${project_id}`);
+    }
+
+    return res.status(200).json({
+      status: 1,
+      message: "Table project order updated successfully",
+      tableproject: updatedTable,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      status: 0,
+      message: "Failed to update order",
+      error: error.message,
+    });
+  }
 };

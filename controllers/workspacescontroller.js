@@ -1304,203 +1304,169 @@ export const editTableProject = async (req, res) => {
   }
 };
 
+export const duplicateProjectBase = async (newDocument) => {
+  const projectOld = await ProjectsModel.findOne({
+    _id: newDocument.old_project_id,
+  });
+
+  if (!projectOld) throw new Error("Old project not found");
+
+  const projectIdNew = uuidv4();
+
+  // Duplicate Project
+  const projectNewData = {
+    ...projectOld.toObject(),
+    _id: projectIdNew,
+    group_project_id: newDocument.target_group_project_id,
+    group_project: newDocument.target_group_project,
+    created_at: new Date(),
+  };
+
+  const projectNew = await ProjectsModel.create(projectNewData);
+
+  // Duplicate Table Projects
+  const tableProjectsOld = await TableProjectsModel.find({
+    project_id: newDocument.old_project_id,
+  }).lean();
+
+  const tableMap = {};
+  const newTableProjects = [];
+
+  for (const table of tableProjectsOld) {
+    const newTableId = uuidv4();
+    tableMap[table._id] = newTableId;
+
+    newTableProjects.push({
+      ...table,
+      _id: newTableId,
+      project_id: projectIdNew,
+      group_project_id: newDocument.target_group_project_id,
+      group_project: newDocument.target_group_project,
+      created_at: new Date(),
+    });
+  }
+
+  await TableProjectsModel.insertMany(newTableProjects);
+
+  // Duplicate SubItems
+  const subItemsOld = await SubItemModel.find({
+    project_id: newDocument.old_project_id,
+  }).lean();
+
+  const newSubItems = subItemsOld.map((sub) => ({
+    ...sub,
+    _id: uuidv4(),
+    project_id: projectIdNew,
+    table_project_id: tableMap[sub.table_project_id],
+    group_project_id: newDocument.target_group_project_id,
+    group_project: newDocument.target_group_project,
+    created_at: new Date(),
+  }));
+
+  if (newSubItems.length > 0) await SubItemModel.insertMany(newSubItems);
+
+  return {
+    projectIdNew,
+    projectNew,
+    tableMap,
+  };
+};
+export const copyContentPostingFiles = async (
+  oldProjectId,
+  newProjectId,
+  tableMap,
+  io
+) => {
+  const contentsOld = await ContentPostingsModel.find({
+    project_id: oldProjectId,
+  }).lean();
+
+  for (const content of contentsOld) {
+    try {
+      const originalName = content.file_name_real.replace(
+        /^[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}-/,
+        ""
+      );
+
+      const timestamp = getTimestampWIB();
+      const newFileName = `${timestamp}-${originalName}`;
+
+      const copy = await drive.files.copy({
+        fileId: content.file_name,
+        requestBody: {
+          name: newFileName,
+          parents: [process.env.FOLDER_ID],
+        },
+      });
+
+      const newContent = {
+        ...content,
+        _id: uuidv4(),
+        project_id: newProjectId,
+        table_project_id: tableMap[content.table_project_id],
+        file_name: copy.data.id,
+        file_name_real: newFileName,
+        created_at: new Date(),
+      };
+
+      await ContentPostingsModel.create(newContent);
+
+      // Emit real-time progress
+      if (io) {
+        io.emit(`contentPostingData_${newContent.table_project_id}`, [
+          newContent,
+        ]);
+      }
+    } catch (err) {
+      console.error("❌ File copy error:", err.message);
+    }
+  }
+
+  // Emit completion alert
+  if (io) {
+    io.emit(`duplicateProjectComplete_${newProjectId}`, {
+      status: 1,
+      message: "All files copied successfully",
+    });
+  }
+};
+
 export const DuplicateProject = async (req, res) => {
   try {
     const newDocument = req.body;
 
-    // 🔹 Ambil project lama
-    const projectOld = await ProjectsModel.findOne({
-      _id: newDocument.old_project_id,
-    });
+    // 1️⃣ Duplikasi project tanpa copy video
+    const result = await duplicateProjectBase(newDocument);
 
-    if (!projectOld) {
-      return res.status(200).json({
-        status: 0,
-        message: "Old project not found",
-      });
-    }
-
-    // 🔹 Duplicate project baru
-    const projectIdNew = uuidv4();
-    const projectNewData = {
-      ...projectOld.toObject(),
-      _id: projectIdNew,
-      group_project_id: newDocument.target_group_project_id,
-      group_project: newDocument.target_group_project,
-      created_at: new Date(),
-    };
-
-    const projectNew = await ProjectsModel.create(projectNewData);
-
-    // 🔹 Emit new project ke group target
-    if (req.io) {
-      req.io.to(projectNew.group_project_id).emit("newProject", projectNew);
-      console.log(
-        `🟢 Emitting new project to group: ${projectNew.group_project_id}`
-      );
-    }
-
-    // 🔹 Ambil semua table project lama
-    const tableProjectsOld = await TableProjectsModel.find({
-      project_id: newDocument.old_project_id,
-    }).lean();
-
-    if (!tableProjectsOld.length) {
-      return res.status(200).json({
-        status: 0,
-        message: "No table projects found for this project",
-      });
-    }
-
-    const newTableProjects = [];
-    const newSubItems = [];
-    const newContentPostings = [];
-
-    // 🔹 Loop semua table project lama
-    for (const table of tableProjectsOld) {
-      const tableIdNew = uuidv4();
-
-      // Duplicate table project
-      const tableNew = {
-        ...table,
-        _id: tableIdNew,
-        project_id: projectIdNew,
-        group_project_id: newDocument.target_group_project_id,
-        group_project: newDocument.target_group_project,
-        created_at: new Date(),
-      };
-      newTableProjects.push(tableNew);
-
-      // 🔹 Duplicate subItems
-      const subItemsOld = await SubItemModel.find({
-        table_project_id: table._id,
-      }).lean();
-
-      if (subItemsOld.length) {
-        subItemsOld.forEach((sub) => {
-          newSubItems.push({
-            ...sub,
-            _id: uuidv4(),
-            table_project_id: tableIdNew,
-            project_id: projectIdNew,
-            group_project_id: newDocument.target_group_project_id,
-            group_project: newDocument.target_group_project,
-            created_at: new Date(),
-          });
-        });
-      }
-
-      // 🔹 Duplicate content postings (copy file di Google Drive)
-      const contentPostingsOld = await ContentPostingsModel.find({
-        table_project_id: table._id,
-      }).lean();
-
-      if (contentPostingsOld.length) {
-        for (const content of contentPostingsOld) {
-          try {
-            const originalName = content.file_name_real.replace(
-              /^[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}-/,
-              ""
-            );
-            const timestamp = getTimestampWIB();
-            const newFileName = `${timestamp}-${originalName}`;
-
-            const copiedFile = await drive.files.copy({
-              fileId: content.file_name,
-              requestBody: {
-                name: newFileName,
-                parents: [process.env.FOLDER_ID],
-              },
-              fields: "id, name",
-            });
-
-            newContentPostings.push({
-              ...content,
-              _id: uuidv4(),
-              project_id: projectIdNew,
-              table_project_id: tableIdNew,
-              group_project_id: newDocument.target_group_project_id,
-              group_project: newDocument.target_group_project,
-              file_name: copiedFile.data.id,
-              file_name_real: newFileName,
-              created_at: new Date(),
-              updated_at: new Date(),
-            });
-
-            console.log(
-              `✅ Copied file ${originalName} → ${copiedFile.data.id}`
-            );
-          } catch (error) {
-            console.error(
-              `❌ Error copying file ${content.file_name_real}:`,
-              error.message
-            );
-
-            // 🧹 Rollback manual kalau copy file gagal
-            await ProjectsModel.deleteOne({ _id: projectIdNew });
-            await TableProjectsModel.deleteMany({ project_id: projectIdNew });
-            await SubItemModel.deleteMany({ project_id: projectIdNew });
-            await ContentPostingsModel.deleteMany({ project_id: projectIdNew });
-
-            return res.status(200).json({
-              status: 0,
-              message:
-                "Error copying file on Google Drive. All changes rolled back. Please try again.",
-            });
-          }
-        }
-      }
-    }
-
-    // 🔹 Simpan semua hasil duplikasi
-    await TableProjectsModel.insertMany(newTableProjects);
-    if (newSubItems.length) await SubItemModel.insertMany(newSubItems);
-    if (newContentPostings.length)
-      await ContentPostingsModel.insertMany(newContentPostings);
-
-    // 🔹 Emit hasil duplikasi ke frontend
-    if (req.io) {
-      // Emit table projects
-      req.io
-        .to(projectIdNew)
-        .emit("newTableProject", { projectId: projectIdNew, newTableProjects });
-
-      // Emit subItems dan content per table
-      newTableProjects.forEach((table) => {
-        const subItemsForTable = newSubItems.filter(
-          (sub) => sub.table_project_id === table._id
-        );
-        if (subItemsForTable.length)
-          req.io.emit(`subItemData_${table._id}`, subItemsForTable);
-
-        const contentForTable = newContentPostings.filter(
-          (c) => c.table_project_id === table._id
-        );
-        if (contentForTable.length)
-          req.io.emit(`contentPostingData_${table._id}`, contentForTable);
-      });
-
-      console.log(
-        `🟢 Emitted duplicated project, tables, subItems, and content postings for ${projectIdNew}`
-      );
-    }
-
-    // 🔹 Return sukses
-    return res.status(200).json({
+    // 2️⃣ Response cepat ke frontend (tidak timeout!)
+    res.status(200).json({
       status: 1,
-      message:
-        "Duplicated project, table projects, subItems, and contentPostings successfully",
-      projectNew,
-      newTableProjects,
-      newSubItems,
-      newContentPostings,
+      message: "Project duplicated. Copying files in background...",
+      project_id: result.projectIdNew,
     });
+
+    // 3️⃣ Jalankan proses copy file di background
+    setImmediate(() => {
+      copyContentPostingFiles(
+        newDocument.old_project_id,
+        result.projectIdNew,
+        result.tableMap,
+        req.io
+      );
+    });
+
+    // 4️⃣ Emit project baru
+    if (req.io) {
+      req.io
+        .to(result.projectNew.group_project_id)
+        .emit("newProject", result.projectNew);
+    }
   } catch (error) {
-    console.error("❌ DuplicateProject error:", error);
+    console.error("ERROR DuplicateProject:", error);
+
     return res.status(200).json({
       status: 0,
-      message: "Unexpected error duplicating project. Please try again.",
-      error: error.message,
+      message: "Duplicate failed: " + error.message,
     });
   }
 };
